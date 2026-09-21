@@ -1,6 +1,8 @@
 import { QrCode, ShieldCheck, Clock } from "lucide-react";
 
 /** Hero illustration: stylised Farmacia Tech kiosk with floating status cards. */
+const PICKED = [3, 7]; // slots that "dispense" in the animation
+
 export function MachineIllustration() {
   const slots = Array.from({ length: 12 });
   return (
@@ -35,7 +37,21 @@ export function MachineIllustration() {
           const tones = ["#8bb1f5", "#b9d0fa", "#5a8cee", "#ffffff"];
           return (
             <g key={i}>
-              <rect x={x} y={y} width="40" height="40" rx="6" fill="#fff" stroke="#b9d0fa" />
+              <rect
+                x={x}
+                y={y}
+                width="40"
+                height="40"
+                rx="6"
+                fill="#fff"
+                stroke="#b9d0fa"
+                strokeWidth="1.5"
+                style={
+                  PICKED.includes(i)
+                    ? { animation: "slot-glow 6s ease-in-out infinite", animationDelay: `${PICKED.indexOf(i) * 0.6}s` }
+                    : undefined
+                }
+              />
               <rect x={x + 8} y={y + 8} width="24" height="16" rx="3" fill={tones[(i * 7) % 4]} stroke="#8bb1f5" strokeWidth=".8" />
               <rect x={x + 6} y={y + 30} width="28" height="3" rx="1.5" fill="#dbe7fd" />
             </g>
@@ -46,8 +62,9 @@ export function MachineIllustration() {
         <rect x="214" y="72" width="62" height="96" rx="10" fill="#061b3a" fillOpacity=".55" />
         <rect x="221" y="80" width="48" height="36" rx="5" fill="#8bb1f5" fillOpacity=".9" />
         <rect x="227" y="88" width="30" height="4" rx="2" fill="#fff" />
-        <rect x="227" y="96" width="20" height="4" rx="2" fill="#fff" fillOpacity=".6" />
+        <rect x="227" y="96" width="20" height="4" rx="2" fill="#fff" fillOpacity=".6" className="animate-blink" />
         <rect x="224" y="126" width="42" height="32" rx="6" fill="#fff" fillOpacity=".12" stroke="#fff" strokeOpacity=".5" strokeDasharray="3 3" />
+        <rect x="227" y="130" width="36" height="2" rx="1" fill="#8bb1f5" style={{ animation: "scan 2s ease-in-out infinite" }} />
         <circle cx="245" cy="142" r="6" fill="#fff" fillOpacity=".85" />
         <rect x="214" y="178" width="62" height="60" rx="10" fill="#fff" fillOpacity=".1" />
         {[0, 1, 2].map((r) =>
@@ -63,10 +80,14 @@ export function MachineIllustration() {
         <rect x="44" y="316" width="232" height="62" rx="12" fill="#061b3a" fillOpacity=".5" />
         <rect x="64" y="332" width="192" height="30" rx="8" fill="#061b3a" fillOpacity=".6" />
         <rect x="136" y="343" width="48" height="10" rx="5" fill="#8bb1f5" />
+        <g style={{ animation: "pack-drop 6s ease-in infinite", transformBox: "fill-box" }}>
+          <rect x="140" y="326" width="40" height="18" rx="3" fill="#fff" stroke="#2360e2" strokeWidth="1.2" />
+          <path d="M156 331h3v-3h2v3h3v2h-3v3h-2v-3h-3z" fill="#2360e2" />
+        </g>
         <rect x="60" y="392" width="200" height="6" rx="3" fill="#fff" fillOpacity=".15" />
       </svg>
 
-      <div className="absolute -left-4 top-24 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-card ring-1 ring-line sm:-left-10">
+      <div className="animate-float absolute -left-4 top-24 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-card ring-1 ring-line sm:-left-10">
         <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-50 text-brand-600">
           <ShieldCheck className="h-5 w-5" />
         </span>
@@ -76,13 +97,13 @@ export function MachineIllustration() {
         </div>
       </div>
 
-      <div className="absolute -right-2 top-1/2 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-card ring-1 ring-line sm:-right-8">
+      <div className="animate-float-slow absolute -right-2 top-1/2 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-card ring-1 ring-line sm:-right-8">
         <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-500 text-white">
           <QrCode className="h-5 w-5" />
         </span>
         <div>
           <p className="text-xs font-semibold text-ink">QR scanned</p>
-          <p className="text-[11px] text-muted">Dispensing slot 4 & 7…</p>
+          <p className="text-[11px] text-muted">Dispensing slots 4 & 8…</p>
         </div>
       </div>
 

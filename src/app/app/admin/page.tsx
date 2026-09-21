@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Inbox, UserCheck } from "lucide-react";
+import { FileText, Inbox, Plus, UserCheck } from "lucide-react";
+import { ButtonLink } from "@/components/Button";
 import { requireViewer } from "@/lib/auth";
 import { reviewApplication } from "../actions";
 import { Card, Empty, PageTitle } from "../ui";
@@ -11,15 +12,30 @@ export default async function AdminPage() {
   const [{ data: apps }, { data: leads }] = await Promise.all([
     supabase
       .from("doctor_applications")
-      .select("id, full_name, registration_no, council, qualification, created_at")
+      .select("id, full_name, registration_no, council, qualification, document_path, created_at")
       .eq("status", "pending")
       .order("created_at"),
     supabase.from("leads").select("id, name, email, phone, organisation, type, message, created_at").order("created_at", { ascending: false }).limit(25),
   ]);
 
+  // Short-lived links to each applicant's private document.
+  const docLinks = new Map<string, string>();
+  await Promise.all(
+    (apps ?? [])
+      .filter((a) => a.document_path)
+      .map(async (a) => {
+        const { data } = await supabase.storage.from("doctor-docs").createSignedUrl(a.document_path!, 600);
+        if (data?.signedUrl) docLinks.set(a.id, data.signedUrl);
+      }),
+  );
+
   return (
     <>
-      <PageTitle title="Admin" subtitle="Verify doctors and follow up on enquiries." />
+      <PageTitle
+        title="Admin"
+        subtitle="Verify doctors, manage machines and follow up on enquiries."
+        action={<ButtonLink href="/app/vendor/new" variant="secondary"><Plus className="h-4 w-4" /> Add machine</ButtonLink>}
+      />
 
       <h2 className="mb-4 text-lg font-bold text-ink">Pending doctor verifications</h2>
       {!apps?.length ? (
@@ -34,6 +50,13 @@ export default async function AdminPage() {
                 <dt className="text-muted">Council</dt><dd className="text-ink">{a.council}</dd>
                 <dt className="text-muted">Qualification</dt><dd className="text-ink">{a.qualification}</dd>
               </dl>
+              {docLinks.get(a.id) ? (
+                <a href={docLinks.get(a.id)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline">
+                  <FileText className="h-4 w-4" /> View document
+                </a>
+              ) : (
+                <p className="mt-3 text-xs font-medium text-amber-700">No document uploaded</p>
+              )}
               <p className="mt-3 text-xs text-muted">Check the registration on the NMC Indian Medical Register before approving.</p>
               <form action={reviewApplication} className="mt-4 flex gap-2">
                 <input type="hidden" name="id" value={a.id} />

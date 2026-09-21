@@ -42,6 +42,17 @@ export function ApplicationForm({ defaults }: { defaults?: Partial<Record<string
           {councils.map((c) => <option key={c}>{c}</option>)}
         </select>
       </label>
+      <label className="text-sm font-medium text-ink sm:col-span-2">
+        Registration certificate or degree <span className="font-normal text-muted">(PDF, JPG or PNG, max 4 MB)</span>
+        <input
+          type="file"
+          name="document"
+          accept="application/pdf,image/jpeg,image/png"
+          required={!defaults?.document_path}
+          className="mt-1.5 block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100"
+        />
+        {defaults?.document_path && <span className="mt-1 block text-xs text-muted">A document is already on file. Upload again only to replace it.</span>}
+      </label>
       {state.error && <p role="alert" className="text-sm text-red-600 sm:col-span-2">{state.error}</p>}
       <div className="sm:col-span-2">
         <Button type="submit" disabled={pending}>

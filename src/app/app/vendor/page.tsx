@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { AlertTriangle, MapPin, Server } from "lucide-react";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { ButtonLink } from "@/components/Button";
 import { requireViewer } from "@/lib/auth";
 import { Card, Empty, PageTitle } from "../ui";
 
@@ -32,7 +35,11 @@ export default async function VendorPage() {
 
   return (
     <>
-      <PageTitle title="Machines" subtitle={profile.role === "admin" ? "All machines on the network" : "Machines you operate"} />
+      <PageTitle
+        title="Machines"
+        subtitle={profile.role === "admin" ? "All machines on the network" : "Machines you operate"}
+        action={profile.role === "admin" ? <ButtonLink href="/app/vendor/new"><Plus className="h-4 w-4" /> Add machine</ButtonLink> : undefined}
+      />
       {machines.length === 0 ? (
         <Empty icon={<Server className="h-6 w-6" />} title="No machines yet" body="Once a machine is installed and assigned to you, its slots and stock will show up here." />
       ) : (
@@ -41,7 +48,8 @@ export default async function VendorPage() {
             const low = m.slots.filter((s) => s.medicine_name && s.stock_packs <= 2).length;
             const expiring = m.slots.filter((s) => s.expires_on && new Date(s.expires_on).getTime() < soon).length;
             return (
-              <Card key={m.id}>
+              <Link key={m.id} href={`/app/vendor/${m.id}`} className="block transition hover:-translate-y-0.5">
+              <Card className="h-full hover:ring-brand-200">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wider text-brand-500">{m.code}</p>
@@ -76,6 +84,7 @@ export default async function VendorPage() {
                   </p>
                 )}
               </Card>
+              </Link>
             );
           })}
         </div>

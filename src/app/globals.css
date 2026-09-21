@@ -50,3 +50,63 @@
 @utility brand-gradient {
   background-image: linear-gradient(135deg, #2360e2 0%, #1d57c9 45%, #0d3f82 100%);
 }
+
+/* ---------- Motion ---------------------------------------------------------- */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes slot-glow {
+  0%, 18%, 100% { fill: #ffffff; stroke: #b9d0fa; }
+  6%, 12% { fill: #dbe7fd; stroke: #2360e2; }
+}
+@keyframes pack-drop {
+  0%, 30% { transform: translateY(-150px); opacity: 0; }
+  38% { opacity: 1; }
+  55% { transform: translateY(0); opacity: 1; }
+  60% { transform: translateY(-6px); }
+  65%, 85% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+@keyframes scan {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(22px); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@utility animate-float { animation: float 6s ease-in-out infinite; }
+@utility animate-float-slow { animation: float 8s ease-in-out infinite; }
+@utility animate-blink { animation: blink 1.6s ease-in-out infinite; }
+@utility animate-marquee { animation: marquee 40s linear infinite; }
+@utility animate-fade-up { animation: fade-up 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* Scroll reveal — see components/Reveal.tsx */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.reveal[data-shown="true"] { opacity: 1; transform: none; }
+
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .reveal { opacity: 1; transform: none; }
+}

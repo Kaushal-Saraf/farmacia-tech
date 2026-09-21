@@ -7,6 +7,8 @@ const columns = [
     title: "Product",
     links: [
       { href: "/how-it-works", label: "How it works" },
+      { href: "/machine", label: "The machine" },
+      { href: "/locations", label: "Find a machine" },
       { href: "/for-clinics", label: "For clinics & pharmacies" },
       { href: "/for-doctors", label: "For doctors" },
       { href: "/login", label: "Patient sign in" },
@@ -16,6 +18,8 @@ const columns = [
     title: "Company",
     links: [
       { href: "/about", label: "About" },
+      { href: "/updates", label: "Updates" },
+      { href: "/faq", label: "FAQ" },
       { href: "/contact", label: "Contact" },
       { href: "/privacy", label: "Privacy" },
       { href: "/terms", label: "Terms" },

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { BadgeCheck, Clock, FilePlus2, FileText, XCircle } from "lucide-react";
+import Link from "next/link";
+import { ButtonLink } from "@/components/Button";
 import { requireViewer } from "@/lib/auth";
 import { Card, Empty, PageTitle } from "../ui";
 import { ApplicationForm } from "./ApplicationForm";
@@ -24,23 +26,25 @@ export default async function DoctorPage() {
           title="Prescriptions you've issued"
           subtitle="Verified prescriber"
           action={
-            <span className="inline-flex items-center gap-2 rounded-xl bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-700 ring-1 ring-brand-100">
-              <FilePlus2 className="h-4 w-4" /> New prescription (Phase 2)
-            </span>
+            <ButtonLink href="/app/doctor/new">
+              <FilePlus2 className="h-4 w-4" /> New prescription
+            </ButtonLink>
           }
         />
         {!issued?.length ? (
-          <Empty icon={<FileText className="h-6 w-6" />} title="Nothing issued yet" body="The prescription writer arrives in Phase 2. It will look patients up by mobile number." />
+          <Empty icon={<FileText className="h-6 w-6" />} title="Nothing issued yet" body="Click New prescription and look your patient up by mobile number." />
         ) : (
           <Card className="p-0">
             <ul className="divide-y divide-line">
               {issued.map((rx) => (
-                <li key={rx.id} className="flex items-center justify-between gap-4 px-6 py-4 text-sm">
+                <li key={rx.id}>
+                  <Link href={`/app/prescriptions/${rx.id}`} className="flex items-center justify-between gap-4 px-6 py-4 text-sm hover:bg-surface">
                   <div>
                     <p className="font-semibold text-ink">{rx.title}</p>
                     <p className="text-xs text-muted">{rx.patient_name ?? "Patient"} · {new Date(rx.created_at).toLocaleDateString("en-IN")}</p>
                   </div>
                   <span className="text-xs font-semibold capitalize text-brand-600">{rx.status}</span>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -52,7 +56,7 @@ export default async function DoctorPage() {
 
   const { data: application } = await supabase
     .from("doctor_applications")
-    .select("full_name, registration_no, council, qualification, status, created_at")
+    .select("full_name, registration_no, council, qualification, document_path, status, created_at")
     .eq("user_id", profile.id)
     .maybeSingle();
 

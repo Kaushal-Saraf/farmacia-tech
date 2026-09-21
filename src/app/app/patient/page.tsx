@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { FileText, Pill } from "lucide-react";
 import { requireViewer } from "@/lib/auth";
 import { Card, Empty, PageTitle } from "../ui";
@@ -72,9 +73,12 @@ export default async function PatientPage() {
                 ))}
               </ul>
               {rx.advice && <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-sm text-muted">{rx.advice}</p>}
-              {rx.status === "issued" && (
-                <p className="mt-4 text-xs font-medium text-brand-600">Buying at a machine is coming soon.</p>
-              )}
+              <div className="mt-4 flex items-center justify-between">
+                <Link href={`/app/prescriptions/${rx.id}`} className="text-sm font-semibold text-brand-600 hover:underline">
+                  View prescription →
+                </Link>
+                {rx.status === "issued" && <span className="text-xs text-muted">Buying at a machine: coming soon</span>}
+              </div>
             </Card>
           ))}
         </div>

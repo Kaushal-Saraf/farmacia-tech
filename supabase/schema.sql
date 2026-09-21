@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Farmacia Tech — database schema (Supabase / Postgres)
--- Run this once in Supabase → SQL Editor. Safe to read top to bottom.
+-- Run this first in Supabase → SQL Editor, then phase2.sql.
 -- Every table has Row Level Security ON: the browser can only see rows the
 -- policies below allow.
 -- ============================================================================
