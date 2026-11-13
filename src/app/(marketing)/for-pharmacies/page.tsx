@@ -18,7 +18,7 @@ const benefits = [
   { icon: Wrench, title: "Installation & support", body: "We handle setup, training and maintenance, so your team only has to restock." },
 ];
 
-const sites = ["Retail pharmacies", "Hospital pharmacies", "Pharmacy chains", "Outside hospital OPDs", "University campuses", "Residential societies"];
+const sites = ["Pharmacies of any size", "Pharmacy chains", "Hospital OPDs", "University campuses", "Residential societies"];
 
 export default function ForPharmaciesPage() {
   return (
