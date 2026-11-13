@@ -17,7 +17,7 @@ The marketing site works without Supabase. Sign-in and the `/app` portal show a 
 ## Connect Supabase (≈10 minutes)
 
 1. Create a project at supabase.com. Pick the **Mumbai (ap-south-1)** region so health data stays in India.
-2. **SQL Editor** → paste and run `supabase/schema.sql`, then `supabase/phase2.sql` (in that order, each once).
+2. **SQL Editor** → paste and run `supabase/schema.sql`, then `supabase/phase2.sql`, then `supabase/vendor-devices.sql` (in that order, each once). Then run `supabase/vendor-functions.sql`. That last one is safe to re-run; paste it again whenever it changes.
 3. **Authentication → Sign In / Providers → Phone**: enable it and connect an SMS provider (Twilio, MessageBird, Vonage or Textlocal).
    For testing without SMS, add test numbers + fixed OTPs under *Phone → Test OTPs*.
 4. **Project Settings → API**: copy the URL and anon key into `.env.local`.
@@ -44,7 +44,7 @@ src/
     machine.ts       Machine specs and installation steps
     site.ts          Name, contact email, links — edit this first
   proxy.ts           Refreshes the session and protects /app/*
-supabase/            schema.sql then phase2.sql — tables, functions, RLS, storage
+supabase/            schema.sql → phase2.sql → vendor-devices.sql (run once each), then vendor-functions.sql (re-runnable)
 ```
 
 ## Roles
