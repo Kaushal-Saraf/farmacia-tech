@@ -38,12 +38,12 @@ export function ContactForm({ defaultType = "partner" }: { defaultType?: string 
       </label>
       <label className="text-sm font-medium text-ink">
         Organisation <span className="font-normal text-muted">(optional)</span>
-        <input name="organisation" autoComplete="organization" className={field} placeholder="Hospital, clinic, pharmacy…" />
+        <input name="organisation" autoComplete="organization" className={field} placeholder="Pharmacy, hospital…" />
       </label>
       <label className="text-sm font-medium text-ink sm:col-span-2">
         I'm interested as a…
         <select name="type" defaultValue={defaultType} className={field}>
-          <option value="partner">Clinic / hospital / pharmacy partner</option>
+          <option value="partner">Pharmacy / hospital partner</option>
           <option value="doctor">Doctor</option>
           <option value="investor">Investor</option>
           <option value="patient">Patient</option>

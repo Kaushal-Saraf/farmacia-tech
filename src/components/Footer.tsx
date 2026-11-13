@@ -9,7 +9,7 @@ const columns = [
       { href: "/how-it-works", label: "How it works" },
       { href: "/machine", label: "The machine" },
       { href: "/locations", label: "Find a machine" },
-      { href: "/for-clinics", label: "For clinics & pharmacies" },
+      { href: "/for-pharmacies", label: "For pharmacies" },
       { href: "/for-doctors", label: "For doctors" },
       { href: "/login/patient", label: "Patient sign in" },
       { href: "/login/doctor", label: "Doctor sign in" },

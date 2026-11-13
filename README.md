@@ -31,7 +31,7 @@ The marketing site works without Supabase. Sign-in and the `/app` portal show a 
 ```
 src/
   app/
-    (marketing)/     Public site: home, how-it-works, machine, locations, for-clinics, for-doctors, about, faq, updates, contact, privacy, terms
+    (marketing)/     Public site: home, how-it-works, machine, locations, for-pharmacies, for-doctors, about, faq, updates, contact, privacy, terms
     (auth)/login/    Pick patient / doctor / operator → phone number → OTP (roles.ts holds the three doors)
     app/             Signed-in portal: patient · doctor · vendor · admin
   components/        Logo, header, footer, buttons, hero illustration

@@ -5,8 +5,8 @@ import { ButtonLink } from "@/components/Button";
 import { CtaBand } from "../CtaBand";
 
 export const metadata: Metadata = {
-  title: "For clinics & pharmacies",
-  description: "Extend your pharmacy to 24×7 with a Farmacia Tech smart medicine vending machine: live inventory, expiry tracking and UPI payments.",
+  title: "For pharmacies",
+  description: "Keep your pharmacy open 24×7 with a Farmacia Tech smart medicine vending machine: live inventory, expiry tracking and UPI payments.",
 };
 
 const benefits = [
@@ -18,15 +18,15 @@ const benefits = [
   { icon: Wrench, title: "Installation & support", body: "We handle setup, training and maintenance, so your team only has to restock." },
 ];
 
-const sites = ["Hospitals & OPDs", "Clinics & polyclinics", "Retail pharmacies", "University campuses", "Corporate offices", "Residential societies"];
+const sites = ["Retail pharmacies", "Hospital pharmacies", "Pharmacy chains", "Outside hospital OPDs", "University campuses", "Residential societies"];
 
-export default function ForClinicsPage() {
+export default function ForPharmaciesPage() {
   return (
     <>
       <PageHero
-        eyebrow="For clinics & pharmacies"
+        eyebrow="For pharmacies"
         title="Your pharmacy, open around the clock"
-        intro="Place a Farmacia Tech machine at your hospital, clinic or pharmacy and let patients collect verified prescriptions at any hour. You stay in control of stock and pricing."
+        intro="Place a Farmacia Tech machine at your pharmacy and let patients collect verified prescriptions at any hour, even after your shutters are down. You stay in control of stock and pricing."
       >
         <ButtonLink href="/contact?type=partner">Become a partner</ButtonLink>
         <ButtonLink href="/how-it-works" variant="secondary">How it works</ButtonLink>
@@ -47,7 +47,7 @@ export default function ForClinicsPage() {
 
       <section className="bg-surface py-20">
         <div className="container-page">
-          <SectionHeading eyebrow="Where it fits" title="Designed for high-footfall sites" center />
+          <SectionHeading eyebrow="Where it fits" title="Wherever your pharmacy serves patients" center />
           <ul className="mx-auto mt-10 flex max-w-3xl flex-wrap justify-center gap-3">
             {sites.map((s) => (
               <li key={s} className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-brand-800 ring-1 ring-brand-100">
@@ -58,7 +58,7 @@ export default function ForClinicsPage() {
         </div>
       </section>
 
-      <CtaBand title="Let's find the right spot for your first machine." />
+      <CtaBand title="Let's find the right spot for your pharmacy's first machine." />
     </>
   );
 }

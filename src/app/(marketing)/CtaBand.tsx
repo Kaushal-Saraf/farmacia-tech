@@ -1,8 +1,8 @@
 import { ButtonLink } from "@/components/Button";
 
 export function CtaBand({
-  title = "Bring 24×7 prescription access to your campus or clinic.",
-  body = "We're partnering with hospitals, clinics, pharmacies and institutions for early deployments. Tell us about your site and we'll get in touch.",
+  title = "Bring 24×7 prescription access to your pharmacy.",
+  body = "We're partnering with pharmacies, hospitals and institutions for early deployments. Tell us about your site and we'll get in touch.",
 }: {
   title?: string;
   body?: string;

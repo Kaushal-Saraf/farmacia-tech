@@ -18,12 +18,12 @@ const stats = [
   { value: "0", label: "Aadhaar numbers collected" },
 ];
 
-const sites = ["Hospital OPDs", "Clinics", "Retail pharmacies", "University campuses", "Corporate offices", "Residential societies", "Metro stations", "Industrial parks"];
+const sites = ["Retail pharmacies", "Hospital OPDs", "Clinics", "University campuses", "Corporate offices", "Residential societies", "Metro stations", "Industrial parks"];
 
 const audiences = [
   { icon: User, title: "Patients", body: "Get your prescription on your phone, pay online, and collect from a nearby machine whenever it suits you.", href: "/login/patient", cta: "Patient sign in" },
   { icon: Stethoscope, title: "Doctors", body: "Write clear digital prescriptions in seconds. Your patients can fill them 24×7 without hunting for an open pharmacy.", href: "/for-doctors", cta: "For doctors" },
-  { icon: Building2, title: "Clinics & pharmacies", body: "Extend your pharmacy beyond counter hours with a machine that tracks its own stock, sales and expiry dates.", href: "/for-clinics", cta: "Partner with us" },
+  { icon: Building2, title: "Pharmacies", body: "Extend your pharmacy beyond counter hours with a machine that tracks its own stock, sales and expiry dates.", href: "/for-pharmacies", cta: "Partner with us" },
 ];
 
 export default function HomePage() {
