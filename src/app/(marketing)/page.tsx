@@ -18,7 +18,7 @@ const stats = [
   { value: "0", label: "Aadhaar numbers collected" },
 ];
 
-const sites = ["Retail pharmacies", "Hospital OPDs", "Clinics", "University campuses", "Corporate offices", "Residential societies", "Metro stations", "Industrial parks"];
+const sites = ["Retail pharmacies", "Hospital pharmacies", "Hospital OPDs", "University campuses", "Corporate offices", "Residential societies", "Metro stations", "Industrial parks"];
 
 const audiences = [
   { icon: User, title: "Patients", body: "Get your prescription on your phone, pay online, and collect from a nearby machine whenever it suits you.", href: "/login/patient", cta: "Patient sign in" },
