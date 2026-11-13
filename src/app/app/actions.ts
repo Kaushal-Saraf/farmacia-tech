@@ -46,7 +46,9 @@ export async function applyAsDoctor(_prev: FormState, formData: FormData): Promi
     .from("doctor_applications")
     .upsert(document_path ? { ...app, document_path } : app, { onConflict: "user_id" });
   if (error) return { error: "Couldn't submit. Please try again." };
-  revalidatePath("/app/doctor");
+  // Doctors skip the "what should we call you" step, so take the name from here.
+  if (!profile.full_name) await supabase.from("profiles").update({ full_name: app.full_name }).eq("id", profile.id);
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 

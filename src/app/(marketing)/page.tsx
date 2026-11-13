@@ -21,7 +21,7 @@ const stats = [
 const sites = ["Hospital OPDs", "Clinics", "Retail pharmacies", "University campuses", "Corporate offices", "Residential societies", "Metro stations", "Industrial parks"];
 
 const audiences = [
-  { icon: User, title: "Patients", body: "Get your prescription on your phone, pay online, and collect from a nearby machine whenever it suits you.", href: "/login", cta: "Patient sign in" },
+  { icon: User, title: "Patients", body: "Get your prescription on your phone, pay online, and collect from a nearby machine whenever it suits you.", href: "/login/patient", cta: "Patient sign in" },
   { icon: Stethoscope, title: "Doctors", body: "Write clear digital prescriptions in seconds. Your patients can fill them 24×7 without hunting for an open pharmacy.", href: "/for-doctors", cta: "For doctors" },
   { icon: Building2, title: "Clinics & pharmacies", body: "Extend your pharmacy beyond counter hours with a machine that tracks its own stock, sales and expiry dates.", href: "/for-clinics", cta: "Partner with us" },
 ];

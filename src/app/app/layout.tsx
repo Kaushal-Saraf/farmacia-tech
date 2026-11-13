@@ -4,9 +4,11 @@ import { LogOut } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { SetupNotice } from "@/components/SetupNotice";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { requireViewer } from "@/lib/auth";
+import { isDoctorApplicant, requireViewer } from "@/lib/auth";
 import { signOut } from "../(auth)/login/actions";
 import { PortalNav } from "./PortalNav";
+
+const roleLabel = { patient: "Patient", doctor: "Doctor", vendor: "Machine operator", admin: "Admin" } as const;
 
 export default async function PortalLayout({ children }: LayoutProps<"/app">) {
   await connection(); // always render per request — this area is private
@@ -18,6 +20,7 @@ export default async function PortalLayout({ children }: LayoutProps<"/app">) {
     );
   }
   const { profile } = await requireViewer();
+  const doctorApplicant = await isDoctorApplicant();
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-surface">
@@ -27,7 +30,7 @@ export default async function PortalLayout({ children }: LayoutProps<"/app">) {
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold text-ink">{profile.full_name ?? profile.phone}</p>
-              <p className="text-xs capitalize text-muted">{profile.role}</p>
+              <p className="text-xs text-muted">{doctorApplicant ? "Doctor · awaiting verification" : roleLabel[profile.role]}</p>
             </div>
             <form action={signOut}>
               <button className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-brand-50 hover:text-ink">
@@ -36,7 +39,7 @@ export default async function PortalLayout({ children }: LayoutProps<"/app">) {
             </form>
           </div>
         </div>
-        <PortalNav role={profile.role} />
+        <PortalNav role={profile.role} doctorApplicant={doctorApplicant} />
       </header>
       <main className="container-page flex-1 py-10">{children}</main>
     </div>

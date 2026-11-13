@@ -4,33 +4,52 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Role } from "@/lib/types";
 
-const links: { href: string; label: string; roles: Role[] }[] = [
-  { href: "/app/patient", label: "My prescriptions", roles: ["patient", "doctor", "vendor", "admin"] },
-  { href: "/app/doctor", label: "Doctor", roles: ["patient", "doctor", "admin"] },
-  { href: "/app/vendor", label: "Machines", roles: ["vendor", "admin"] },
-  { href: "/app/admin", label: "Admin", roles: ["admin"] },
-];
+type Tab = { href: string; label: string };
 
-export function PortalNav({ role }: { role: Role }) {
+/** Each kind of account only sees its own tabs. */
+function tabsFor(role: Role, doctorApplicant: boolean): Tab[] {
+  switch (role) {
+    case "patient":
+      return doctorApplicant
+        ? [{ href: "/app/doctor", label: "Doctor verification" }]
+        : [{ href: "/app/patient", label: "My prescriptions" }];
+    case "doctor":
+      return [
+        { href: "/app/doctor", label: "Prescriptions issued" },
+        { href: "/app/doctor/new", label: "New prescription" },
+      ];
+    case "vendor":
+      return [{ href: "/app/vendor", label: "My machines" }];
+    case "admin":
+      return [
+        { href: "/app/admin", label: "Admin" },
+        { href: "/app/vendor", label: "Machines" },
+      ];
+  }
+}
+
+export function PortalNav({ role, doctorApplicant }: { role: Role; doctorApplicant: boolean }) {
   const pathname = usePathname();
+  const tabs = tabsFor(role, doctorApplicant);
+  // Most specific match wins, so "New prescription" doesn't also light up "Prescriptions issued".
+  const active = tabs
+    .filter((t) => pathname === t.href || pathname.startsWith(`${t.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+
   return (
     <nav className="container-page -mb-px flex gap-1 overflow-x-auto" aria-label="Portal">
-      {links
-        .filter((l) => l.roles.includes(role))
-        .map((l) => {
-          const active = pathname.startsWith(l.href);
-          return (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold ${
-                active ? "border-brand-500 text-brand-700" : "border-transparent text-muted hover:text-ink"
-              }`}
-            >
-              {l.label === "Doctor" && role === "patient" ? "Are you a doctor?" : l.label}
-            </Link>
-          );
-        })}
+      {tabs.map((t) => (
+        <Link
+          key={t.href}
+          href={t.href}
+          aria-current={t.href === active ? "page" : undefined}
+          className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold ${
+            t.href === active ? "border-brand-500 text-brand-700" : "border-transparent text-muted hover:text-ink"
+          }`}
+        >
+          {t.label}
+        </Link>
+      ))}
     </nav>
   );
 }

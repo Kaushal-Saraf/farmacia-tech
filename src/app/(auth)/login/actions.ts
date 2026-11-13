@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { normalisePhone, safeNext } from "@/lib/auth";
+import { isLoginRole } from "./roles";
 
 export type AuthState = { error?: string };
 
@@ -10,12 +11,15 @@ export async function sendOtp(_prev: AuthState, formData: FormData): Promise<Aut
   const phone = normalisePhone(String(formData.get("phone") ?? ""));
   if (!phone) return { error: "Enter a valid 10-digit Indian mobile number." };
   const next = safeNext(formData.get("next"));
+  const role = formData.get("role");
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({ phone });
   if (error) return { error: "We couldn't send the code. Please try again in a minute." };
 
-  redirect(`/login/verify?phone=${encodeURIComponent(phone)}&next=${encodeURIComponent(next)}`);
+  const params = new URLSearchParams({ phone, next });
+  if (isLoginRole(role)) params.set("role", role);
+  redirect(`/login/verify?${params}`);
 }
 
 export async function verifyOtp(_prev: AuthState, formData: FormData): Promise<AuthState> {

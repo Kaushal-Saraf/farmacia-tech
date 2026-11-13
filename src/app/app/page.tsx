@@ -1,9 +1,20 @@
 import { redirect } from "next/navigation";
-import { requireViewer } from "@/lib/auth";
+import { isDoctorApplicant, requireViewer } from "@/lib/auth";
 
-export default async function PortalHome() {
+const home = { patient: "/app/patient", doctor: "/app/doctor", vendor: "/app/vendor", admin: "/app/admin" } as const;
+
+/** Sends everyone to their own area. `?as=` is the door they chose on the sign-in page. */
+export default async function PortalHome({ searchParams }: PageProps<"/app">) {
   const { profile } = await requireViewer();
+  const { as } = await searchParams;
+
+  if (profile.role === "patient") {
+    // Came in through the operator door but no machines are linked yet → explain what to do.
+    if (as === "vendor") redirect("/app/vendor");
+    // New doctors go straight to verification, and stay there until approved.
+    if (as === "doctor" || (await isDoctorApplicant())) redirect("/app/doctor");
+  }
+
   if (!profile.full_name) redirect("/app/welcome");
-  const home = { patient: "/app/patient", doctor: "/app/doctor", vendor: "/app/vendor", admin: "/app/admin" } as const;
   redirect(home[profile.role]);
 }

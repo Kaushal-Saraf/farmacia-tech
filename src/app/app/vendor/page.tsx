@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { AlertTriangle, MapPin, Server } from "lucide-react";
+import { AlertTriangle, MapPin, Plus, Server } from "lucide-react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
 import { ButtonLink } from "@/components/Button";
 import { requireViewer } from "@/lib/auth";
 import { Card, Empty, PageTitle } from "../ui";
@@ -23,7 +22,8 @@ function expiryCutoff(days = 30) {
 }
 
 export default async function VendorPage() {
-  const { supabase, profile } = await requireViewer(["vendor", "admin"]);
+  const { supabase, profile } = await requireViewer();
+  if (profile.role !== "vendor" && profile.role !== "admin") return <NotAnOperator phone={profile.phone} />;
   let query = supabase
     .from("machines")
     .select("id, code, name, address, is_active, slots:machine_slots(slot_no, medicine_name, stock_packs, expires_on)")
@@ -90,5 +90,26 @@ export default async function VendorPage() {
         </div>
       )}
     </>
+  );
+}
+
+/** Someone used the operator sign-in, but their number isn't linked to any machine yet. */
+function NotAnOperator({ phone }: { phone: string | null }) {
+  return (
+    <div className="mx-auto max-w-lg">
+      <Card className="p-8 text-center">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-500">
+          <Server className="h-6 w-6" />
+        </div>
+        <h1 className="mt-4 text-xl font-extrabold tracking-tight text-ink">This number isn&apos;t registered as an operator</h1>
+        <p className="mt-2 text-sm text-muted">
+          Operator accounts are set up by Farmacia Tech. Send us the number you signed in with
+          {phone && <span className="font-semibold text-ink"> ({phone})</span>} and we&apos;ll link your machines to it.
+        </p>
+        <div className="mt-6 flex justify-center">
+          <ButtonLink href="/contact">Contact us</ButtonLink>
+        </div>
+      </Card>
+    </div>
   );
 }

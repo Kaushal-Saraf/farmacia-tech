@@ -7,5 +7,5 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Only auth-related routes need the session — marketing pages stay fully static.
-  matcher: ["/app/:path*", "/login"],
+  matcher: ["/app/:path*", "/login/:path*"],
 };

@@ -34,10 +34,12 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname === "/login") {
+  // Already signed in: skip the login screens. /login/doctor etc. keep the chosen door.
+  const door = /^\/login(?:\/(patient|doctor|vendor))?$/.exec(pathname);
+  if (user && door) {
     const url = request.nextUrl.clone();
     url.pathname = "/app";
-    url.search = "";
+    url.search = door[1] ? `?as=${door[1]}` : "";
     return NextResponse.redirect(url);
   }
 

@@ -24,7 +24,7 @@ export default function ForDoctorsPage() {
         title="Prescribe once. Your patient collects anytime."
         intro="Farmacia Tech gives you a fast, verified e-prescription tool. Your patients can fill prescriptions even after the pharmacy has closed."
       >
-        <ButtonLink href="/login?next=/app/doctor">Join as a doctor</ButtonLink>
+        <ButtonLink href="/login/doctor">Join as a doctor</ButtonLink>
       </PageHero>
 
       <section className="container-page py-20">

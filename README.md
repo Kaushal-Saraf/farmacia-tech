@@ -32,7 +32,7 @@ The marketing site works without Supabase. Sign-in and the `/app` portal show a 
 src/
   app/
     (marketing)/     Public site: home, how-it-works, machine, locations, for-clinics, for-doctors, about, faq, updates, contact, privacy, terms
-    (auth)/login/    Phone number → OTP sign-in (server actions)
+    (auth)/login/    Pick patient / doctor / operator → phone number → OTP (roles.ts holds the three doors)
     app/             Signed-in portal: patient · doctor · vendor · admin
   components/        Logo, header, footer, buttons, hero illustration
   lib/
@@ -51,10 +51,12 @@ supabase/            schema.sql then phase2.sql — tables, functions, RLS, stor
 
 | Role | How you get it | Can |
 |---|---|---|
-| patient | default on first sign-in | see own prescriptions |
-| doctor | apply at `/app/doctor`, admin approves | issue prescriptions |
-| vendor | admin sets it | see and restock their machines |
+| patient | sign in at `/login/patient` (default for new numbers) | see own prescriptions |
+| doctor | sign in at `/login/doctor`, submit registration, admin approves | issue prescriptions |
+| vendor | admin assigns a machine to their number, then they sign in at `/login/vendor` | see and restock their machines |
 | admin | set manually in SQL | verify doctors, read enquiries, manage machines |
+
+`/login` asks which kind of account you have, and each role only sees its own tabs in the portal. One mobile number = one role.
 
 Security is enforced in the database (RLS), not just the UI: users can't change their own role, patients only see their own prescriptions, and only verified doctors can insert prescriptions.
 

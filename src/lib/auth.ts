@@ -22,6 +22,21 @@ export const getViewer = cache(async () => {
   return { user, profile, supabase };
 });
 
+/**
+ * A patient-role account that has applied to be a doctor (pending or rejected).
+ * Approval turns the role into "doctor", so this is only true while waiting.
+ */
+export const isDoctorApplicant = cache(async () => {
+  const viewer = await getViewer();
+  if (!viewer || viewer.profile.role !== "patient") return false;
+  const { data } = await viewer.supabase
+    .from("doctor_applications")
+    .select("id")
+    .eq("user_id", viewer.profile.id)
+    .maybeSingle();
+  return Boolean(data);
+});
+
 /** Use at the top of every protected page. Redirects if signed out or wrong role. */
 export async function requireViewer(roles?: Role[]) {
   const viewer = await getViewer();

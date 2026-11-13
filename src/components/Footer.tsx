@@ -11,7 +11,8 @@ const columns = [
       { href: "/locations", label: "Find a machine" },
       { href: "/for-clinics", label: "For clinics & pharmacies" },
       { href: "/for-doctors", label: "For doctors" },
-      { href: "/login", label: "Patient sign in" },
+      { href: "/login/patient", label: "Patient sign in" },
+      { href: "/login/doctor", label: "Doctor sign in" },
     ],
   },
   {

@@ -4,11 +4,13 @@ import { useActionState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/Button";
 import { sendOtp, type AuthState } from "./actions";
+import type { LoginRole } from "./roles";
 
-export function PhoneForm({ next }: { next: string }) {
+export function PhoneForm({ role, next }: { role: LoginRole; next: string }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(sendOtp, {});
   return (
     <form action={action} className="space-y-5">
+      <input type="hidden" name="role" value={role} />
       <input type="hidden" name="next" value={next} />
       <label className="block text-sm font-medium text-ink">
         Mobile number
