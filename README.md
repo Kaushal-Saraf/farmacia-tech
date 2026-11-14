@@ -17,7 +17,7 @@ The marketing site works without Supabase. Sign-in and the `/app` portal show a 
 ## Connect Supabase (≈10 minutes)
 
 1. Create a project at supabase.com. Pick the **Mumbai (ap-south-1)** region so health data stays in India.
-2. **SQL Editor** → paste and run `supabase/schema.sql`, then `supabase/phase2.sql`, then `supabase/vendor-devices.sql` (in that order, each once). Then run `supabase/vendor-functions.sql`. That last one is safe to re-run; paste it again whenever it changes.
+2. **SQL Editor** → paste and run `supabase/schema.sql`, then `supabase/phase2.sql`, then `supabase/vendor-devices.sql` (in that order, each once). Then run `supabase/vendor-functions.sql` and `supabase/family.sql`. That last one is safe to re-run; paste it again whenever it changes.
 3. **Authentication → Sign In / Providers → Phone**: enable it and connect an SMS provider (Twilio, MessageBird, Vonage or Textlocal).
    For testing without SMS, add test numbers + fixed OTPs under *Phone → Test OTPs*.
 4. **Project Settings → API**: copy the URL and anon key into `.env.local`.
@@ -51,8 +51,8 @@ supabase/            schema.sql → phase2.sql → vendor-devices.sql (run once 
 
 | Role | How you get it | Can |
 |---|---|---|
-| patient | sign in at `/login/patient` (default for new numbers) | see own prescriptions |
-| doctor | sign in at `/login/doctor`, submit registration, admin approves | issue prescriptions |
+| patient | sign in at `/login/patient` (default for new numbers) | see the prescriptions of everyone on their number; manage family members |
+| doctor | sign in at `/login/doctor`, submit registration, admin approves | issue prescriptions to a family member found by mobile number |
 | vendor | sign in at `/login/vendor` and link a device with its Device ID + pairing code | manage their own devices, stock and scans |
 | admin | set manually in SQL | verify doctors, read enquiries, register devices (Device ID, pairing code, device key) |
 

@@ -1,9 +1,12 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { FlaskConical, Loader2, Pill, Plus, Search, Syringe, Trash2, UserRound } from "lucide-react";
+import { FlaskConical, Loader2, Pill, Plus, Search, Syringe, Trash2, UserPlus, UserRound } from "lucide-react";
 import { Button } from "@/components/Button";
-import { createPrescription, findPatient, type PatientLookup, type RxItem, type RxState } from "../actions";
+import { memberDetails } from "@/lib/family";
+import type { FamilyMember } from "@/lib/types";
+import { addFamilyMember, createPrescription, findPatient, type AddMemberState, type PatientLookup, type RxItem, type RxState } from "../actions";
+import { MemberFields } from "../../MemberFields";
 import { inputClass } from "../../ui";
 
 const KINDS = [
@@ -18,34 +21,95 @@ function blank(kind: RxItem["kind"] = "medicine"): RxItem {
   return { kind, name: "", strength: "", per_day: kind === "medicine" ? "1" : "", days: kind === "medicine" ? "5" : "", instructions: "" };
 }
 
-type Patient = NonNullable<PatientLookup["patient"]>;
+type Picked = { accountId: string; member: FamilyMember };
 
-function PatientPicker({ onPick }: { onPick: (p: Patient) => void }) {
+/** Step 1: the mobile number. Step 2: who on that number the prescription is for. */
+function PatientPicker({ onPick }: { onPick: (p: Picked) => void }) {
   const [lookup, lookupAction, looking] = useActionState<PatientLookup, FormData>(findPatient, {});
-  useEffect(() => {
-    if (lookup.patient) onPick(lookup.patient);
-  }, [lookup.patient, onPick]);
+  const [extra, setExtra] = useState<FamilyMember[]>([]);
+  const [adding, setAdding] = useState(false);
+  const family = lookup.family;
+  const members = family ? [...family.members, ...extra.filter((e) => !family.members.some((m) => m.id === e.id))] : [];
+  const hasSelf = members.some((m) => m.relation === "self");
+
   return (
     <>
-      <form action={lookupAction} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+      <form action={(fd) => { setExtra([]); setAdding(false); lookupAction(fd); }} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
         <label className="flex-1 text-sm font-medium text-ink">
-          Patient's mobile number
+          Patient&apos;s mobile number
           <div className="mt-1.5 flex rounded-xl ring-1 ring-inset ring-line focus-within:ring-2 focus-within:ring-brand-500">
             <span className="flex items-center border-r border-line px-3 text-sm font-semibold text-muted">+91</span>
             <input name="phone" type="tel" inputMode="numeric" maxLength={10} required placeholder="98765 43210" className="w-full rounded-r-xl bg-transparent px-3 py-3 text-sm outline-none" />
           </div>
         </label>
         <Button type="submit" variant="secondary" disabled={looking}>
-          {looking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Find patient
+          {looking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Find family
         </Button>
       </form>
       {lookup.error && <p role="alert" className="mt-3 text-sm text-red-600">{lookup.error}</p>}
+
+      {family && (
+        <div className="mt-5">
+          <p className="text-sm font-medium text-ink">Who is this prescription for?</p>
+          {members.length === 0 && <p className="mt-2 text-sm text-muted">Nobody is listed on this number yet. Add the patient below.</p>}
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+            {members.map((m) => (
+              <li key={m.id}>
+                <button
+                  type="button"
+                  onClick={() => onPick({ accountId: family.account_id, member: m })}
+                  className="w-full rounded-xl px-4 py-3 text-left ring-1 ring-line transition hover:bg-brand-50 hover:ring-brand-300"
+                >
+                  <span className="block font-semibold text-ink">{m.full_name}</span>
+                  <span className="block text-xs text-muted">{memberDetails(m)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {adding ? (
+            <AddMemberForm
+              accountId={family.account_id}
+              allowSelf={!hasSelf}
+              onAdded={(m) => { setExtra((xs) => [...xs, m]); setAdding(false); onPick({ accountId: family.account_id, member: m }); }}
+              onCancel={() => setAdding(false)}
+            />
+          ) : (
+            <button type="button" onClick={() => setAdding(true)} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline">
+              <UserPlus className="h-4 w-4" /> Someone else on this number
+            </button>
+          )}
+        </div>
+      )}
     </>
   );
 }
 
+function AddMemberForm({ accountId, allowSelf, onAdded, onCancel }: {
+  accountId: string;
+  allowSelf: boolean;
+  onAdded: (m: FamilyMember) => void;
+  onCancel: () => void;
+}) {
+  const [state, action, pending] = useActionState<AddMemberState, FormData>(addFamilyMember, {});
+  useEffect(() => {
+    if (state.member) onAdded(state.member);
+  }, [state.member, onAdded]);
+  return (
+    <form action={action} className="mt-4 grid gap-4 rounded-xl bg-surface p-4 ring-1 ring-line sm:grid-cols-2">
+      <input type="hidden" name="account_id" value={accountId} />
+      <MemberFields allowSelf={allowSelf} compact />
+      <p className="text-xs text-muted sm:col-span-2">The account holder will see that you added this person and can edit it.</p>
+      {state.error && <p role="alert" className="text-sm text-red-600 sm:col-span-2">{state.error}</p>}
+      <div className="flex gap-3 sm:col-span-2">
+        <Button type="submit" disabled={pending}>{pending && <Loader2 className="h-4 w-4 animate-spin" />} Add & choose</Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+      </div>
+    </form>
+  );
+}
+
 export function PrescriptionForm() {
-  const [patient, setPatient] = useState<Patient | null>(null);
+  const [patient, setPatient] = useState<Picked | null>(null);
   const [state, submit, saving] = useActionState<RxState, FormData>(createPrescription, {});
   const [items, setItems] = useState<RxItem[]>([blank()]);
 
@@ -59,7 +123,10 @@ export function PrescriptionForm() {
         <h2 className="flex items-center gap-2 font-bold text-ink"><UserRound className="h-5 w-5 text-brand-500" /> Patient</h2>
         {patient ? (
           <div className="mt-4 flex items-center justify-between gap-4 rounded-xl bg-brand-50 px-4 py-3 ring-1 ring-brand-100">
-            <p className="font-semibold text-brand-900">{patient.full_name ?? "Unnamed patient"}</p>
+            <div>
+              <p className="font-semibold text-brand-900">{patient.member.full_name}</p>
+              <p className="text-xs text-brand-800/80">{memberDetails(patient.member)}</p>
+            </div>
             <button type="button" onClick={() => setPatient(null)} className="text-sm font-semibold text-brand-600 hover:underline">
               Change
             </button>
@@ -71,7 +138,8 @@ export function PrescriptionForm() {
 
       {/* 2. Prescription */}
       <form action={submit} className={`space-y-6 ${patient ? "" : "pointer-events-none opacity-50"}`}>
-        <input type="hidden" name="patient_id" value={patient?.id ?? ""} />
+        <input type="hidden" name="patient_id" value={patient?.accountId ?? ""} />
+        <input type="hidden" name="member_id" value={patient?.member.id ?? ""} />
         <input type="hidden" name="items" value={JSON.stringify(items)} />
 
         <section className="rounded-2xl bg-white p-6 shadow-card ring-1 ring-line">

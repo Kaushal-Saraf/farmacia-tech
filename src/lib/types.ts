@@ -44,3 +44,15 @@ export type StockRow = {
   days_left: number | null;
   lock_reason: LockReason | null;
 };
+
+// ---------- Family members on one mobile number (supabase/family.sql) ----------
+export type Relation = "self" | "spouse" | "son" | "daughter" | "father" | "mother" | "other";
+export type Gender = "male" | "female" | "other";
+
+export type FamilyMember = {
+  id: string;
+  full_name: string;
+  relation: Relation;
+  birth_date: string | null; // YYYY-MM-DD
+  gender: Gender | null;
+};

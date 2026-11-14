@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, BadgeCheck, FlaskConical, Pill, Syringe } from "lucide-react";
 import { LogoMark } from "@/components/Logo";
 import { requireViewer } from "@/lib/auth";
+import { ageText, drName, genderLabel, relationLabel } from "@/lib/family";
+import type { Gender, Relation } from "@/lib/types";
 import { PrintButton } from "./PrintButton";
 
 export const metadata: Metadata = { title: "Prescription" };
@@ -20,6 +22,9 @@ type Rx = {
   doctor_id: string;
   doctor_name: string | null;
   patient_name: string | null;
+  patient_birth_date: string | null;
+  patient_gender: Gender | null;
+  patient_relation: Relation | null;
   items: Item[];
 };
 
@@ -42,7 +47,7 @@ export default async function PrescriptionPage({ params }: PageProps<"/app/presc
   // RLS only returns this row to the patient, the issuing doctor, or an admin.
   const { data: rx } = await supabase
     .from("prescriptions")
-    .select("id, title, notes, advice, vitals, status, created_at, doctor_id, doctor_name, patient_name, items:prescription_items(id, kind, name, strength, per_day, days, instructions)")
+    .select("id, title, notes, advice, vitals, status, created_at, doctor_id, doctor_name, patient_name, patient_birth_date, patient_gender, patient_relation, items:prescription_items(id, kind, name, strength, per_day, days, instructions)")
     .eq("id", id)
     .maybeSingle<Rx>();
   if (!rx) notFound();
@@ -65,7 +70,7 @@ export default async function PrescriptionPage({ params }: PageProps<"/app/presc
           <div className="flex items-center gap-3">
             <LogoMark className="h-10 w-10" />
             <div>
-              <p className="text-lg font-extrabold">Dr. {rx.doctor_name ?? "—"}</p>
+              <p className="text-lg font-extrabold">Dr. {drName(rx.doctor_name) ?? "—"}</p>
               <p className="flex items-center gap-1 text-xs text-brand-100 print:text-muted"><BadgeCheck className="h-3.5 w-3.5" /> Verified on Farmacia Tech</p>
             </div>
           </div>
@@ -80,6 +85,15 @@ export default async function PrescriptionPage({ params }: PageProps<"/app/presc
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-muted">Patient</p>
               <p className="mt-1 font-bold text-ink">{rx.patient_name ?? "—"}</p>
+              {(() => {
+                // Age as it was on the day of the prescription.
+                const details = [
+                  ageText(rx.patient_birth_date, new Date(rx.created_at)),
+                  rx.patient_gender && genderLabel[rx.patient_gender],
+                  rx.patient_relation && rx.patient_relation !== "self" && relationLabel[rx.patient_relation],
+                ].filter(Boolean);
+                return details.length > 0 && <p className="text-sm text-muted">{details.join(" · ")}</p>;
+              })()}
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-muted">Diagnosis</p>

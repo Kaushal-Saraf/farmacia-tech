@@ -14,7 +14,7 @@ export default async function NewPrescriptionPage() {
       <Link href="/app/doctor" className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Back
       </Link>
-      <PageTitle title="New prescription" subtitle="The patient sees it in their account as soon as you issue it." />
+      <PageTitle title="New prescription" subtitle="Find the family by mobile number, choose the patient, and they see it in their account as soon as you issue it." />
       <PrescriptionForm />
     </div>
   );

@@ -12,7 +12,10 @@ function tabsFor(role: Role, doctorApplicant: boolean): Tab[] {
     case "patient":
       return doctorApplicant
         ? [{ href: "/app/doctor", label: "Doctor verification" }]
-        : [{ href: "/app/patient", label: "My prescriptions" }];
+        : [
+            { href: "/app/patient", label: "My prescriptions" },
+            { href: "/app/patient/family", label: "My family" },
+          ];
     case "doctor":
       return [
         { href: "/app/doctor", label: "Prescriptions issued" },
