@@ -22,11 +22,15 @@ function tabsFor(role: Role, doctorApplicant: boolean): Tab[] {
         { href: "/app/doctor/new", label: "New prescription" },
       ];
     case "vendor":
-      return [{ href: "/app/vendor", label: "My devices" }];
+      return [
+        { href: "/app/vendor", label: "My devices" },
+        { href: "/app/vendor/stock", label: "Stock" },
+      ];
     case "admin":
       return [
         { href: "/app/admin", label: "Admin" },
         { href: "/app/vendor", label: "Devices" },
+        { href: "/app/vendor/stock", label: "Stock" },
       ];
   }
 }

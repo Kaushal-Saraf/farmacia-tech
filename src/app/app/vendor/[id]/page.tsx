@@ -97,7 +97,10 @@ export default async function DevicePage({ params }: PageProps<"/app/vendor/[id]
         </Card>
 
         <Card>
-          <h2 className="mb-5 font-bold text-ink">Name & location</h2>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-bold text-ink">Name & location</h2>
+            <Link href={`/app/vendor/stock?device=${d.id}`} className="text-sm font-semibold text-brand-600 hover:underline">View stock →</Link>
+          </div>
           <DeviceForm device={d} unit={d.type === "vending" ? "packs" : "strips"} />
         </Card>
       </div>
