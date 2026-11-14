@@ -156,3 +156,18 @@ language sql stable security definer set search_path = '' as $$
    where is_active and type = 'vending' and owner_id is not null
    order by name
 $$;
+
+-- ============================================================================
+-- Every scan must carry the medicine name (as read, or from the recognised product).
+-- ============================================================================
+do $$
+begin
+  if exists (select 1 from public.scan_events where product_name is null or btrim(product_name) = '') then
+    raise exception 'Some scan events have no medicine name; fix them before adding this rule';
+  end if;
+  alter table public.scan_events alter column product_name set not null;
+  if not exists (select 1 from pg_constraint where conname = 'scan_events_product_name_required') then
+    alter table public.scan_events add constraint scan_events_product_name_required
+      check (char_length(btrim(product_name)) between 1 and 200);
+  end if;
+end $$;
