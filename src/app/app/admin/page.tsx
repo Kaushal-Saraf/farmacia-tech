@@ -33,8 +33,8 @@ export default async function AdminPage() {
     <>
       <PageTitle
         title="Admin"
-        subtitle="Verify doctors, manage machines and follow up on enquiries."
-        action={<ButtonLink href="/app/vendor/new" variant="secondary"><Plus className="h-4 w-4" /> Add machine</ButtonLink>}
+        subtitle="Verify doctors, register devices and follow up on enquiries."
+        action={<ButtonLink href="/app/vendor/new" variant="secondary"><Plus className="h-4 w-4" /> Register device</ButtonLink>}
       />
 
       <h2 className="mb-4 text-lg font-bold text-ink">Pending doctor verifications</h2>

@@ -74,3 +74,85 @@ join public.products p on p.id = s.product_id
 join public.batches  b on b.id = s.batch_id;
 
 grant select on public.stock_status to authenticated;
+
+-- ============================================================================
+-- Step 2 — device registration and self-linking
+-- Farmacia Tech registers a device (type, Device ID, pairing code, device key).
+-- The operator links it to their own account with Device ID + pairing code.
+-- ============================================================================
+
+alter table public.machines add column if not exists pairing_code_hash text;  -- SHA-256 hex; cleared once used
+alter table public.machines add column if not exists linked_at timestamptz;
+
+-- Same normalisation the website uses before hashing: letters and digits only, upper case.
+create or replace function public.hash_pairing_code(p_code text)
+returns text language sql immutable set search_path = '' as $$
+  select encode(sha256(convert_to(upper(regexp_replace(coalesce(p_code, ''), '[^A-Za-z0-9]', '', 'g')), 'UTF8')), 'hex')
+$$;
+
+-- Operator links a device. The pairing code works once; a new one is issued only by Farmacia Tech
+-- (that is also how a device moves to a new operator). Linking makes a patient-role number an operator.
+create or replace function public.claim_device(p_code text, p_pairing_code text)
+returns uuid language plpgsql security definer set search_path = '' as $$
+declare
+  me     public.profiles%rowtype;
+  dev_id uuid;
+begin
+  select * into me from public.profiles where id = auth.uid();
+  if me.id is null then raise exception 'Please sign in again'; end if;
+  if me.role = 'doctor' then
+    raise exception 'This number is registered as a doctor. Please use a different mobile number for your devices.';
+  end if;
+
+  -- One message for "no such ID" and "wrong code", so IDs can't be probed.
+  select id into dev_id from public.machines
+   where code = upper(btrim(p_code))
+     and pairing_code_hash is not null
+     and pairing_code_hash = public.hash_pairing_code(p_pairing_code)
+   for update;
+  if dev_id is null then raise exception 'Device ID or pairing code is not correct'; end if;
+
+  update public.machines
+     set owner_id = me.id, pairing_code_hash = null, linked_at = now()
+   where id = dev_id;
+  if me.role = 'patient' then
+    update public.profiles set role = 'vendor' where id = me.id;
+  end if;
+  return dev_id;
+end $$;
+revoke execute on function public.claim_device(text, text) from public, anon;
+grant execute on function public.claim_device(text, text) to authenticated;
+
+-- Admin only: replace a device's key and/or pairing code (hashes are made on the server).
+create or replace function public.set_device_secrets(p_machine_id uuid, p_key_hash text, p_pairing_hash text)
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  if p_key_hash is not null and p_key_hash !~ '^[0-9a-f]{64}$' then raise exception 'bad key hash'; end if;
+  if p_pairing_hash is not null and p_pairing_hash !~ '^[0-9a-f]{64}$' then raise exception 'bad pairing hash'; end if;
+  update public.machines
+     set device_key_hash   = coalesce(p_key_hash, device_key_hash),
+         pairing_code_hash = coalesce(p_pairing_hash, pairing_code_hash)
+   where id = p_machine_id;
+end $$;
+revoke execute on function public.set_device_secrets(uuid, text, text) from public, anon;
+grant execute on function public.set_device_secrets(uuid, text, text) to authenticated;
+
+-- When a device changes hands, the stock physically inside it goes with it.
+-- Scan history and the stock log stay with the operator who owned it at the time.
+create or replace function public.move_device_records()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  update public.stock set vendor_id = new.owner_id where machine_id = new.id;
+  return new;
+end $$;
+
+-- Public finder: active vending machines that an operator has linked.
+create or replace function public.public_machines()
+returns table (code text, name text, address text, latitude double precision, longitude double precision)
+language sql stable security definer set search_path = '' as $$
+  select code, name, address, latitude, longitude
+    from public.machines
+   where is_active and type = 'vending' and owner_id is not null
+   order by name
+$$;

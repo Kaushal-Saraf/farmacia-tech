@@ -53,8 +53,8 @@ supabase/            schema.sql → phase2.sql → vendor-devices.sql (run once 
 |---|---|---|
 | patient | sign in at `/login/patient` (default for new numbers) | see own prescriptions |
 | doctor | sign in at `/login/doctor`, submit registration, admin approves | issue prescriptions |
-| vendor | admin assigns a machine to their number, then they sign in at `/login/vendor` | see and restock their machines |
-| admin | set manually in SQL | verify doctors, read enquiries, manage machines |
+| vendor | sign in at `/login/vendor` and link a device with its Device ID + pairing code | manage their own devices, stock and scans |
+| admin | set manually in SQL | verify doctors, read enquiries, register devices (Device ID, pairing code, device key) |
 
 `/login` asks which kind of account you have, and each role only sees its own tabs in the portal. One mobile number = one role.
 

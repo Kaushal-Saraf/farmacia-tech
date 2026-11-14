@@ -1,115 +1,104 @@
 import type { Metadata } from "next";
-import { AlertTriangle, MapPin, Plus, Server } from "lucide-react";
 import Link from "next/link";
+import { Link2, MapPin, Plus, ScanLine, Server } from "lucide-react";
 import { ButtonLink } from "@/components/Button";
 import { requireViewer } from "@/lib/auth";
+import { deviceTypeLabel, lastSeen } from "@/lib/device-labels";
+import type { DeviceType } from "@/lib/types";
 import { Card, Empty, PageTitle } from "../ui";
+import { LinkDeviceForm } from "./LinkDeviceForm";
 
-export const metadata: Metadata = { title: "Machines" };
+export const metadata: Metadata = { title: "Devices" };
 
-type Machine = {
+type Device = {
   id: string;
   code: string;
   name: string;
+  type: DeviceType;
   address: string | null;
   is_active: boolean;
-  slots: { slot_no: number; medicine_name: string | null; stock_packs: number; expires_on: string | null }[];
+  owner_id: string | null;
+  last_seen_at: string | null;
 };
 
-/** Slots expiring before this timestamp are flagged. */
-function expiryCutoff(days = 30) {
-  return Date.now() + days * 24 * 3600 * 1000;
-}
-
-export default async function VendorPage() {
+export default async function DevicesPage() {
   const { supabase, profile } = await requireViewer();
-  if (profile.role !== "vendor" && profile.role !== "admin") return <NotAnOperator phone={profile.phone} />;
-  let query = supabase
+  const isAdmin = profile.role === "admin";
+
+  // Not an operator yet: linking their first device is what makes them one.
+  if (profile.role !== "vendor" && !isAdmin) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <PageTitle title="Link your first device" subtitle="Add the vending machine or Medicine Checker you received from Farmacia Tech." />
+        <Card><LinkDeviceForm /></Card>
+      </div>
+    );
+  }
+
+  // Row-level security returns only this operator's devices (admins see all).
+  const { data } = await supabase
     .from("machines")
-    .select("id, code, name, address, is_active, slots:machine_slots(slot_no, medicine_name, stock_packs, expires_on)")
-    .order("code");
-  if (profile.role === "vendor") query = query.eq("owner_id", profile.id);
-  const { data } = await query.returns<Machine[]>();
-  const machines = data ?? [];
-  const soon = expiryCutoff();
+    .select("id, code, name, type, address, is_active, owner_id, last_seen_at")
+    .order("name")
+    .returns<Device[]>();
+  const devices = data ?? [];
 
   return (
     <>
       <PageTitle
-        title="Machines"
-        subtitle={profile.role === "admin" ? "All machines on the network" : "Machines you operate"}
-        action={profile.role === "admin" ? <ButtonLink href="/app/vendor/new"><Plus className="h-4 w-4" /> Add machine</ButtonLink> : undefined}
+        title={isAdmin ? "All devices" : "My devices"}
+        subtitle={isAdmin ? "Every registered vending machine and Medicine Checker" : "Vending machines and Medicine Checkers linked to your account"}
+        action={
+          isAdmin ? (
+            <ButtonLink href="/app/vendor/new"><Plus className="h-4 w-4" /> Register device</ButtonLink>
+          ) : (
+            <ButtonLink href="/app/vendor/link"><Link2 className="h-4 w-4" /> Link a device</ButtonLink>
+          )
+        }
       />
-      {machines.length === 0 ? (
-        <Empty icon={<Server className="h-6 w-6" />} title="No machines yet" body="Once a machine is installed and assigned to you, its slots and stock will show up here." />
+      {devices.length === 0 ? (
+        <Empty
+          icon={<Server className="h-6 w-6" />}
+          title="No devices yet"
+          body={isAdmin ? "Register a device to get its Device ID and pairing code." : "Click Link a device and enter the Device ID and pairing code from Farmacia Tech."}
+        />
       ) : (
-        <div className="grid gap-5 lg:grid-cols-2">
-          {machines.map((m) => {
-            const low = m.slots.filter((s) => s.medicine_name && s.stock_packs <= 2).length;
-            const expiring = m.slots.filter((s) => s.expires_on && new Date(s.expires_on).getTime() < soon).length;
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {devices.map((d) => {
+            const seen = lastSeen(d.last_seen_at);
+            const Icon = d.type === "vending" ? Server : ScanLine;
             return (
-              <Link key={m.id} href={`/app/vendor/${m.id}`} className="block transition hover:-translate-y-0.5">
-              <Card className="h-full hover:ring-brand-200">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-brand-500">{m.code}</p>
-                    <h2 className="mt-0.5 font-bold text-ink">{m.name}</h2>
-                    {m.address && (
-                      <p className="mt-1 flex items-center gap-1 text-xs text-muted"><MapPin className="h-3.5 w-3.5" /> {m.address}</p>
-                    )}
-                  </div>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${m.is_active ? "bg-brand-50 text-brand-700 ring-brand-100" : "bg-slate-100 text-slate-600 ring-slate-200"}`}>
-                    {m.is_active ? "Online" : "Inactive"}
-                  </span>
-                </div>
-                <div className="mt-5 grid grid-cols-6 gap-1.5">
-                  {m.slots.sort((a, b) => a.slot_no - b.slot_no).map((s) => (
-                    <div
-                      key={s.slot_no}
-                      title={`${s.slot_no}: ${s.medicine_name ?? "empty"} (${s.stock_packs})`}
-                      className={`rounded-md py-2 text-center text-[11px] font-semibold ${
-                        !s.medicine_name ? "bg-surface text-muted" : s.stock_packs <= 2 ? "bg-amber-100 text-amber-800" : "bg-brand-100 text-brand-800"
-                      }`}
-                    >
-                      {s.stock_packs}
+              <Link key={d.id} href={`/app/vendor/${d.id}`} className="block transition hover:-translate-y-0.5">
+                <Card className="h-full hover:ring-brand-200">
+                  <div className="flex items-start gap-4">
+                    <span className="brand-gradient grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate font-bold text-ink">{d.name}</h2>
+                      <p className="text-xs text-muted">
+                        {deviceTypeLabel[d.type]} · <span className="font-mono">{d.code}</span>
+                      </p>
                     </div>
-                  ))}
-                </div>
-                {(low > 0 || expiring > 0) && (
-                  <p className="mt-4 flex items-center gap-1.5 text-xs font-medium text-amber-700">
-                    <AlertTriangle className="h-4 w-4" />
-                    {low > 0 && `${low} slot${low > 1 ? "s" : ""} low on stock`}
-                    {low > 0 && expiring > 0 && " · "}
-                    {expiring > 0 && `${expiring} expiring within 30 days`}
+                  </div>
+                  <p className="mt-4 flex items-center gap-1.5 text-xs text-muted">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{d.address ?? "Location not set"}</span>
                   </p>
-                )}
-              </Card>
+                  <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold">
+                    <span className={`inline-flex items-center gap-1.5 ${seen.online ? "text-emerald-700" : "text-muted"}`}>
+                      <span className={`h-2 w-2 rounded-full ${seen.online ? "bg-emerald-500" : "bg-slate-300"}`} />
+                      {seen.label}
+                    </span>
+                    {isAdmin && !d.owner_id && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-800 ring-1 ring-amber-200">Not linked</span>}
+                    {!d.is_active && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600 ring-1 ring-slate-200">Inactive</span>}
+                  </div>
+                </Card>
               </Link>
             );
           })}
         </div>
       )}
     </>
-  );
-}
-
-/** Someone used the operator sign-in, but their number isn't linked to any machine yet. */
-function NotAnOperator({ phone }: { phone: string | null }) {
-  return (
-    <div className="mx-auto max-w-lg">
-      <Card className="p-8 text-center">
-        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-500">
-          <Server className="h-6 w-6" />
-        </div>
-        <h1 className="mt-4 text-xl font-extrabold tracking-tight text-ink">This number isn&apos;t registered as an operator</h1>
-        <p className="mt-2 text-sm text-muted">
-          Operator accounts are set up by Farmacia Tech. Send us the number you signed in with
-          {phone && <span className="font-semibold text-ink"> ({phone})</span>} and we&apos;ll link your machines to it.
-        </p>
-        <div className="mt-6 flex justify-center">
-          <ButtonLink href="/contact">Contact us</ButtonLink>
-        </div>
-      </Card>
-    </div>
   );
 }

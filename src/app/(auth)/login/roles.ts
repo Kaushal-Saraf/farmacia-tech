@@ -20,8 +20,8 @@ export const loginRoles = {
     label: "Machine operator",
     title: "Operator sign in",
     icon: Server,
-    pitch: "Manage stock, expiry dates and slots on the machines you run.",
-    intro: "Operator accounts are set up by Farmacia Tech. Sign in with the mobile number you registered with us.",
+    pitch: "Manage stock, expiry dates and scans on your vending machines and Medicine Checkers.",
+    intro: "Sign in with your mobile number, then link your device with the Device ID and pairing code from Farmacia Tech.",
   },
 } satisfies Record<string, { label: string; title: string; icon: LucideIcon; pitch: string; intro: string }>;
 
