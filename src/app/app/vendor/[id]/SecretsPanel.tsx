@@ -40,7 +40,7 @@ export function SecretsPanel({ machineId, linked }: { machineId: string; linked:
       </form>
       {state.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
       {state.created && (
-        <Credentials code={state.created.code} pairingCode={state.created.pairingCode} deviceKey={state.created.deviceKey} />
+        <Credentials code={state.created.code} pairingCode={state.created.pairingCode} deviceKey={state.created.deviceKey} baseUrl={state.created.baseUrl} />
       )}
     </div>
   );

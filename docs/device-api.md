@@ -2,11 +2,49 @@
 
 This is the contract between the website and the device software. Both sides follow it exactly; change it here first.
 
-**Version 1.1 (14 Nov 2026), implemented 26 Nov 2026** in `supabase/vendor-functions.sql` (step 4) and `src/app/api/device/`. Test without hardware: `node scripts/fake-checker.mjs --url http://localhost:3000 --key ftk_…`.
+**Version 1.2 (26 Nov 2026).** Implemented in `supabase/vendor-functions.sql` and `src/app/api/device/`.
+Reference device client (Python, standard library only): [`hardware/ft_device_client.py`](../hardware/ft_device_client.py).
+Server test without hardware: `node scripts/fake-checker.mjs --url <base URL> --key ftk_…`.
 
-**Version 1.1 (14 Nov 2026).** Changes from 1.0:
+Changes in 1.2:
+- `GET /api/device/health` (no key) to check the network and the server clock.
+- `GET /api/device/ping`, a small heartbeat returning `snapshotVersion`. Download the full snapshot only when it changes.
+- The snapshot also carries `snapshotVersion`.
+- Event results include `decision`: what the server applied.
+
+Changes in 1.1:
 - REVIEW and REFUSE scans may have no medicine name (`productId: null`, `productName: ""`), because the checker has no keyboard. The owner sets the product on the website. ACCEPT still requires `productName`.
 - `matchedMaster: true` plus fields with status `from_record` is a valid ACCEPT. The server never downgrades it because of those fields.
+
+## 0. Base URL and endpoints
+
+| Where the server runs | Base URL |
+|---|---|
+| Live site (after this branch is merged and deployed) | `https://farmacia-tech.vercel.app` |
+| A computer on the same Wi-Fi, running `npm run dev` | `http://<that computer's IP>:3000`, e.g. `http://192.168.1.20:3000` (`localhost` only works on the computer itself) |
+
+| Method | Path | Key | Purpose | How often |
+|---|---|---|---|---|
+| GET | `/api/device/health` | no | Network and clock check | at startup, when debugging |
+| GET | `/api/device/ping` | yes | Heartbeat, `snapshotVersion` | every `pollSeconds` (60) |
+| GET | `/api/device/snapshot` | yes | Full offline copy | at startup and when `snapshotVersion` changes |
+| POST | `/api/device/events` | yes | Upload scans (≤100 per request) | whenever the queue has pending scans |
+
+All responses are JSON with `Cache-Control: no-store`. Always use HTTPS on the live site.
+
+**Why not WebSockets.** The website runs on Vercel, which does not keep WebSocket connections open, and the checker must work offline anyway. Polling `ping` every 60 s costs one tiny request a minute and picks up changes (new recall, stock edit, new medicine, midnight expiry) within a minute. If push is ever needed (e.g. for vending-machine dispense commands in Phase 3), the planned upgrade is Supabase Realtime with a short-lived device token; `ping` stays as the fallback.
+
+**Suggested sync loop** (what `hardware/ft_device_client.py` does in `run_forever`):
+
+```
+on start:        health → ping → snapshot (or use the saved snapshot.json if offline)
+every 60 s:      ping
+                 if ping.snapshotVersion != saved snapshot.snapshotVersion → snapshot
+                 upload pending scans (oldest first, ≤100 per request)
+on each scan:    save to the local queue FIRST, then show the result, then try to upload
+offline:         keep working from snapshot.json; retry after 10 s, 30 s, 1 min, 5 min, then every 15 min
+on HTTP 401:     stop syncing, show "Device key rejected - contact Farmacia Tech"
+```
 
 ## 1. Identity
 
@@ -45,6 +83,7 @@ Everything the device needs to work offline.
 ```json
 {
   "serverTime": "2026-11-14T10:12:31Z",
+  "snapshotVersion": "7afa187ad612ee8f",
   "device": { "deviceId": "FT-MC-4HT8PW", "type": "checker", "name": "City Pharmacy bench" },
   "products": [
     { "productId": "uuid", "productName": "Paracetamol", "strength": "500 mg", "manufacturer": "Acme", "packSize": "10 tablets" }
@@ -70,6 +109,19 @@ Everything the device needs to work offline.
 - `stock` is this device's own stock, including unverified batches, which are marked `notConfirmed: true`.
 - `lockReason` is `"expired"`, `"recalled"` or `null`. A locked batch must never be accepted as sellable. (For a vending machine, stock rows can also be locked with `"not_confirmed"`: unverified batches are never dispensed.)
 - A device restock scan adds to that batch's existing stock row on the device (whatever its shelf); the owner can set shelves on the website.
+
+## 3a. `GET /api/device/ping`
+
+```json
+{ "serverTime": "2026-11-26T10:12:31Z", "deviceId": "FT-MC-4HT8PW", "name": "City Pharmacy bench",
+  "snapshotVersion": "7afa187ad612ee8f", "pollSeconds": 60 }
+```
+
+`snapshotVersion` changes when medicines, confirmed batches, recalls, this device's stock, the device name, or the date (India time) change. Compare it with the `snapshotVersion` in your saved snapshot. Ping also updates the device's "last seen" time on the website.
+
+## 3b. `GET /api/device/health`
+
+No key. `{ "ok": true, "api": "1.2", "serverTime": "2026-11-26T10:12:31Z" }`
 
 ## 4. `POST /api/device/events`
 

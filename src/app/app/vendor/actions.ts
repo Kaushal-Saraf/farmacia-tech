@@ -5,12 +5,13 @@ import { revalidatePath } from "next/cache";
 import { requireViewer } from "@/lib/auth";
 import { hashDeviceKey, hashPairingCode, newDeviceCode, newDeviceKey, newPairingCode } from "@/lib/devices";
 import { deviceTypeLabel } from "@/lib/device-labels";
+import { site } from "@/lib/site";
 import type { DeviceType } from "@/lib/types";
 
 export type DeviceFormState = { error?: string; ok?: string };
 
 /** Secrets are returned once, straight after they're made, and never stored in plain text. */
-export type Credentials = { machineId: string; code: string; type: DeviceType; pairingCode?: string; deviceKey?: string };
+export type Credentials = { machineId: string; code: string; type: DeviceType; pairingCode?: string; deviceKey?: string; baseUrl: string };
 export type CredentialState = { error?: string; created?: Credentials };
 
 const isUuid = (v: string) => /^[0-9a-f-]{36}$/.test(v);
@@ -67,7 +68,7 @@ export async function registerDevice(_prev: CredentialState, formData: FormData)
   }
 
   revalidatePath("/app/vendor");
-  return { created: { machineId: machine.id, code: machine.code, type, pairingCode, deviceKey } };
+  return { created: { machineId: machine.id, code: machine.code, type, pairingCode, deviceKey, baseUrl: site.url } };
 }
 
 /** Issues a new pairing code (to hand a device to a new operator) or a new device key. */
@@ -89,7 +90,7 @@ export async function resetDeviceSecret(_prev: CredentialState, formData: FormDa
   });
   if (error) return { error: "Couldn't save. Please try again." };
   revalidatePath(`/app/vendor/${machineId}`);
-  return { created: { machineId, code: m.code, type: m.type, pairingCode, deviceKey } };
+  return { created: { machineId, code: m.code, type: m.type, pairingCode, deviceKey, baseUrl: site.url } };
 }
 
 export async function setMachineActive(formData: FormData) {

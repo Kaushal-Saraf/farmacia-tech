@@ -380,6 +380,40 @@ begin
   return n;
 end $$;
 
+-- ---------- Snapshot version (contract 1.2) ----------------------------------
+-- A short fingerprint of everything in this device's snapshot. It changes when medicines, confirmed
+-- batches, recalls, this device's stock or the date change, so a device can ping cheaply and download
+-- the full snapshot only when needed. Internal.
+create or replace function public.device_snapshot_version(p_machine uuid)
+returns text language sql stable security definer set search_path = '' as $$
+  select left(md5(concat_ws('|',
+    (select count(*) || ':' || coalesce(max(created_at)::text, '') from public.products),
+    (select count(*) || ':' || coalesce(max(greatest(created_at, coalesce(confirmed_at, created_at)))::text, '')
+       from public.batches where source <> 'unverified'),
+    (select count(*) || ':' || coalesce(max(created_at)::text, '') from public.recalls),
+    (select count(*) || ':' || coalesce(sum(quantity), 0) || ':' || coalesce(max(updated_at)::text, '')
+       from public.stock where machine_id = p_machine),
+    (select name || ':' || type from public.machines where id = p_machine),
+    public.today_ist()::text                       -- "expired" can change at midnight
+  )), 16)
+$$;
+
+-- ---------- GET /api/device/ping (contract 1.2) -------------------------------
+create or replace function public.device_ping(p_key text)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare m public.machines%rowtype;
+begin
+  select * into m from public.machines where id = public.device_by_key(p_key);
+  if m.id is null then return null; end if;
+  update public.machines set last_seen_at = now() where id = m.id;
+  return jsonb_build_object(
+    'serverTime', to_char(now() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+    'deviceId', m.code,
+    'name', m.name,
+    'snapshotVersion', public.device_snapshot_version(m.id),
+    'pollSeconds', 60);
+end $$;
+
 -- ---------- GET /api/device/snapshot ----------------------------------------
 create or replace function public.device_snapshot(p_key text)
 returns jsonb language plpgsql security definer set search_path = '' as $$
@@ -391,6 +425,7 @@ begin
 
   return jsonb_build_object(
     'serverTime', to_char(now() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+    'snapshotVersion', public.device_snapshot_version(m.id),
     'device', jsonb_build_object('deviceId', m.code, 'type', m.type, 'name', m.name),
     'products', coalesce((
       select jsonb_agg(jsonb_build_object('productId', p.id, 'productName', p.name, 'strength', p.strength,
@@ -862,7 +897,8 @@ begin
     'public.device_apply_event(uuid, text, public.device_type, jsonb)'] loop
     execute format('revoke execute on function %s from public, anon, authenticated', f);
   end loop;
-  foreach f in array array['public.device_snapshot(text)', 'public.device_ingest_events(text, jsonb)'] loop
+  execute 'revoke execute on function public.device_snapshot_version(uuid) from public, anon, authenticated';
+  foreach f in array array['public.device_snapshot(text)', 'public.device_ingest_events(text, jsonb)', 'public.device_ping(text)'] loop
     execute format('revoke execute on function %s from public', f);
     execute format('grant execute on function %s to anon, authenticated', f);
   end loop;

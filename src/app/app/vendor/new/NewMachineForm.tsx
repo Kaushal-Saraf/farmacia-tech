@@ -23,7 +23,7 @@ export function NewMachineForm() {
     return (
       <div className="space-y-6">
         <p className="font-bold text-ink">Registered. Hand the Device ID and pairing code to the operator.</p>
-        <Credentials code={c.code} pairingCode={c.pairingCode} deviceKey={c.deviceKey} />
+        <Credentials code={c.code} pairingCode={c.pairingCode} deviceKey={c.deviceKey} baseUrl={c.baseUrl} />
         <div className="flex flex-wrap gap-3">
           <Link href={`/app/vendor/${c.machineId}`} className="inline-flex items-center rounded-xl bg-brand-500 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-600">
             Open device

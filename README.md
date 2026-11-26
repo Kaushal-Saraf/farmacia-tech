@@ -49,6 +49,7 @@ src/
     site.ts          Name, contact email, links — edit this first
   proxy.ts           Refreshes the session and protects /app/*
 scripts/             fake-checker.mjs: pretends to be a Medicine Checker
+hardware/            ft_device_client.py: reference Python client for the device
 docs/                device-api.md: the device contract
 supabase/            schema.sql → phase2.sql → vendor-devices.sql (once each), then roles.sql → vendor-functions.sql → family.sql (re-runnable)
 ```
@@ -66,7 +67,7 @@ Product and batch facts are shared by all operators; devices, stock and scans ar
 
 ### Device API
 
-`GET /api/device/snapshot` and `POST /api/device/events`, with the key in `X-Device-Key`. The full contract (formats, every field, what the server does with each scan) is in [`docs/device-api.md`](docs/device-api.md).
+`GET /api/device/health` (no key), `GET /api/device/ping` (heartbeat with `snapshotVersion`), `GET /api/device/snapshot` and `POST /api/device/events`, with the key in `X-Device-Key`. On the live site the base URL is `https://farmacia-tech.vercel.app`; registering a device on the admin page shows a ready-made `config.json`. A reference Python client for the Raspberry Pi is in [`hardware/`](hardware/). The full contract (formats, every field, what the server does with each scan) is in [`docs/device-api.md`](docs/device-api.md).
 
 Test without the hardware:
 
