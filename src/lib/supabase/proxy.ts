@@ -1,7 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "./config";
-import { SIDE_COOKIE, SIDE_COOKIE_OPTIONS, isSide } from "../side";
+import { SIDE_COOKIE, SIDE_COOKIE_OPTIONS, isSide, sideHome, type Side } from "../side";
+import type { Role } from "../types";
 
 /** Refreshes the Supabase session cookie and guards /app routes. */
 export async function updateSession(request: NextRequest) {
@@ -37,22 +39,33 @@ export async function updateSession(request: NextRequest) {
 
   // Already signed in: skip the login screens. /login/doctor etc. switch to that side.
   const door = /^\/login(?:\/(patient|doctor|vendor))?$/.exec(pathname);
-  if (user && door) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/app";
-    url.search = "";
-    return withSide(NextResponse.redirect(url), response, door[1]);
-  }
-
-  // /app?as=doctor (after sign-in through a door): remember the side, then drop the query.
+  // /app itself only forwards to a side's home. Doing that here (not in the page) means the
+  // page never renders just to redirect, which also avoids a React dev-mode timing error.
   const as = request.nextUrl.searchParams.get("as");
-  if (user && pathname === "/app" && isSide(as) && as !== "admin") {
-    const url = request.nextUrl.clone();
-    url.search = "";
-    return withSide(NextResponse.redirect(url), response, as);
+  if (user && (door || pathname === "/app")) {
+    const chosen = door ? door[1] : isSide(as) && as !== "admin" ? as : undefined;
+    const home = await portalHome(supabase, user.id, chosen ?? request.cookies.get(SIDE_COOKIE)?.value);
+    if (home) {
+      const url = request.nextUrl.clone();
+      url.pathname = home;
+      url.search = "";
+      return withSide(NextResponse.redirect(url), response, chosen);
+    }
   }
 
   return response;
+}
+
+/** The home page for this user's side, or the name step for a new patient. Null if unknown. */
+async function portalHome(supabase: SupabaseClient, userId: string, side: string | undefined) {
+  type Row = { role: Role; roles?: Role[]; full_name: string | null };
+  let { data, error } = await supabase.from("profiles").select("role, roles, full_name").eq("id", userId).maybeSingle<Row>();
+  if (error?.code === "42703") ({ data, error } = await supabase.from("profiles").select("role, full_name").eq("id", userId).maybeSingle<Row>());
+  if (error || !data) return null;
+  const roles = data.roles ?? ["patient", data.role];
+  const current: Side = isSide(side) && (side !== "admin" || roles.includes("admin")) ? side : data.role;
+  if (current === "patient" && !data.full_name) return "/app/welcome";
+  return sideHome[current];
 }
 
 /** Carries refreshed auth cookies over to a redirect and sets the side cookie. */
