@@ -41,6 +41,23 @@ export default async function DevicesPage() {
   const { data } = await query.returns<Device[]>();
   const devices = data ?? [];
 
+  // At-a-glance numbers per device (row-level security keeps these to this operator).
+  const ids = devices.map((d) => d.id);
+  const [{ data: stockRows }, { data: openScans }] = ids.length
+    ? await Promise.all([
+        supabase.from("stock_status").select("machine_id, quantity, lock_reason").in("machine_id", ids).gt("quantity", 0),
+        supabase.from("scan_events").select("machine_id").in("machine_id", ids).eq("review_status", "open"),
+      ])
+    : [{ data: [] }, { data: [] }];
+  const glance = new Map<string, { units: number; locked: number; review: number }>();
+  for (const id of ids) glance.set(id, { units: 0, locked: 0, review: 0 });
+  for (const r of stockRows ?? []) {
+    const g = glance.get(r.machine_id as string)!;
+    g.units += r.quantity as number;
+    if (r.lock_reason === "expired" || r.lock_reason === "recalled") g.locked += r.quantity as number;
+  }
+  for (const r of openScans ?? []) glance.get(r.machine_id as string)!.review += 1;
+
   return (
     <>
       <PageTitle
@@ -83,6 +100,16 @@ export default async function DevicesPage() {
                     <MapPin className="h-3.5 w-3.5 shrink-0" />
                     <span className="truncate">{d.address ?? "Location not set"}</span>
                   </p>
+                  {(() => {
+                    const g = glance.get(d.id)!;
+                    return (
+                      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded-lg bg-surface py-2"><p className="text-sm font-bold text-ink">{g.units}</p><p className="text-[11px] text-muted">in stock</p></div>
+                        <div className={`rounded-lg py-2 ${g.review ? "bg-amber-50" : "bg-surface"}`}><p className={`text-sm font-bold ${g.review ? "text-amber-800" : "text-ink"}`}>{g.review}</p><p className="text-[11px] text-muted">to review</p></div>
+                        <div className={`rounded-lg py-2 ${g.locked ? "bg-red-50" : "bg-surface"}`}><p className={`text-sm font-bold ${g.locked ? "text-red-700" : "text-ink"}`}>{g.locked}</p><p className="text-[11px] text-muted">to remove</p></div>
+                      </div>
+                    );
+                  })()}
                   <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold">
                     <span className={`inline-flex items-center gap-1.5 ${seen.online ? "text-emerald-700" : "text-muted"}`}>
                       <span className={`h-2 w-2 rounded-full ${seen.online ? "bg-emerald-500" : "bg-slate-300"}`} />
