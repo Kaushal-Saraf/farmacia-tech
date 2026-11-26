@@ -19,7 +19,7 @@ export default async function PortalLayout({ children }: LayoutProps<"/app">) {
       </main>
     );
   }
-  const { profile } = await requireViewer();
+  const { profile, supabase } = await requireViewer();
   const [side, sides, doctorApplicant] = await Promise.all([getSide(), availableSides(), isDoctorApplicant()]);
   const isDoctor = hasRole(profile, "doctor");
   const isVendor = hasRole(profile, "vendor");
@@ -28,6 +28,20 @@ export default async function PortalLayout({ children }: LayoutProps<"/app">) {
     : side === "vendor" && !isVendor ? "Machine operator · no device yet"
     : sideLabel[side];
   const others = sides.filter((s) => s !== side);
+
+  // Badges on the operator tabs: scans waiting for review, and expired/recalled stock still on a device.
+  const counts = { review: 0, alerts: 0 };
+  if ((side === "vendor" && isVendor) || side === "admin") {
+    let reviewQ = supabase.from("scan_events").select("id", { count: "exact", head: true }).eq("review_status", "open");
+    let alertsQ = supabase.from("stock_status").select("id", { count: "exact", head: true }).in("lock_reason", ["expired", "recalled"]).gt("quantity", 0);
+    if (side !== "admin") {
+      reviewQ = reviewQ.eq("vendor_id", profile.id);
+      alertsQ = alertsQ.eq("vendor_id", profile.id);
+    }
+    const [review, alerts] = await Promise.all([reviewQ, alertsQ]);
+    counts.review = review.count ?? 0;
+    counts.alerts = alerts.count ?? 0;
+  }
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-surface">
@@ -61,7 +75,7 @@ export default async function PortalLayout({ children }: LayoutProps<"/app">) {
             </form>
           </div>
         </div>
-        <PortalNav side={side} isDoctor={isDoctor} isVendor={isVendor} />
+        <PortalNav side={side} isDoctor={isDoctor} isVendor={isVendor} counts={counts} />
       </header>
       <main className="container-page flex-1 py-10">{children}</main>
     </div>
