@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Farmacia Tech — family members on one mobile number (patient side)
--- Run after schema.sql and phase2.sql. Safe to run again.
+-- Run after schema.sql, phase2.sql and roles.sql. Safe to run again.
 --
 -- One patient account (mobile number) can hold several people: the account
 -- holder ("self"), spouse, children, parents… Each prescription is for one of
@@ -67,7 +67,8 @@ create trigger family_members_guard before update on public.family_members
 create or replace function public.sync_self_member()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-  if new.role = 'patient' and new.full_name is not null then
+  -- Every number is a patient (roles.sql), so everyone with a name gets a "self" entry.
+  if new.full_name is not null then
     insert into public.family_members (account_id, full_name, relation, added_by)
     values (new.id, new.full_name, 'self', new.id)
     on conflict (account_id) where relation = 'self'
@@ -81,7 +82,7 @@ create trigger profiles_sync_self after insert or update of full_name, role on p
 
 -- Existing patients get their "self" member.
 insert into public.family_members (account_id, full_name, relation, added_by)
-select id, full_name, 'self', id from public.profiles where role = 'patient' and full_name is not null
+select id, full_name, 'self', id from public.profiles where full_name is not null
 on conflict (account_id) where relation = 'self' do nothing;
 
 -- ---------- Prescriptions are for one family member -------------------------
@@ -129,8 +130,8 @@ create or replace function public.find_family_by_phone(p_phone text)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare acc uuid;
 begin
-  if public.my_role() not in ('doctor', 'admin') then raise exception 'forbidden'; end if;
-  select id into acc from public.profiles where phone = p_phone and role = 'patient';
+  if not (public.has_role('doctor') or public.is_admin()) then raise exception 'forbidden'; end if;
+  select id into acc from public.profiles where phone = p_phone;
   if acc is null then return null; end if;
   return jsonb_build_object(
     'account_id', acc,
@@ -152,8 +153,8 @@ create or replace function public.doctor_add_family_member(
 ) returns uuid language plpgsql security definer set search_path = '' as $$
 declare new_id uuid;
 begin
-  if public.my_role() <> 'doctor' then raise exception 'forbidden'; end if;
-  if not exists (select 1 from public.profiles where id = p_account_id and role = 'patient') then
+  if not public.has_role('doctor') then raise exception 'forbidden'; end if;
+  if not exists (select 1 from public.profiles where id = p_account_id) then
     raise exception 'No patient account for this number';
   end if;
   if p_relation = 'self' and exists (select 1 from public.family_members where account_id = p_account_id and relation = 'self') then

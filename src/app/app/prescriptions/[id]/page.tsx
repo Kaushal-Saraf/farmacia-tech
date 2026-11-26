@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, BadgeCheck, FlaskConical, Pill, Syringe } from "lucide-react";
 import { LogoMark } from "@/components/Logo";
-import { requireViewer } from "@/lib/auth";
+import { requireSide } from "@/lib/auth";
 import { ageText, drName, genderLabel, relationLabel } from "@/lib/family";
 import type { Gender, Relation } from "@/lib/types";
 import { PrintButton } from "./PrintButton";
@@ -41,7 +41,7 @@ const icon = { medicine: Pill, test: FlaskConical, injection: Syringe };
 
 export default async function PrescriptionPage({ params }: PageProps<"/app/prescriptions/[id]">) {
   const { id } = await params;
-  const { supabase, profile } = await requireViewer();
+  const { supabase, profile, side } = await requireSide("patient", "doctor");
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
 
   // RLS only returns this row to the patient, the issuing doctor, or an admin.
@@ -52,7 +52,7 @@ export default async function PrescriptionPage({ params }: PageProps<"/app/presc
     .maybeSingle<Rx>();
   if (!rx) notFound();
 
-  const back = rx.doctor_id === profile.id ? "/app/doctor" : "/app/patient";
+  const back = side === "doctor" && rx.doctor_id === profile.id ? "/app/doctor" : "/app/patient";
   const groups = (["medicine", "injection", "test"] as const).map((k) => ({ kind: k, items: rx.items.filter((i) => i.kind === k) })).filter((g) => g.items.length);
   const vitals = Object.entries(rx.vitals ?? {}).filter(([, v]) => v);
 

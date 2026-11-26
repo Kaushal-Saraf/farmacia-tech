@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { UserPlus, UserRound } from "lucide-react";
-import { requireViewer } from "@/lib/auth";
+import { requireSide } from "@/lib/auth";
 import { memberDetails } from "@/lib/family";
 import type { FamilyMember } from "@/lib/types";
 import { removeMember } from "../actions";
@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "My family" };
 type Member = FamilyMember & { added_by_name: string | null };
 
 export default async function FamilyPage() {
-  const { supabase, profile } = await requireViewer(["patient"]);
+  const { supabase, profile } = await requireSide("patient");
   const { data } = await supabase
     .from("family_members")
     .select("id, full_name, relation, birth_date, gender, added_by_name")

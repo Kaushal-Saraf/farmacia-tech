@@ -2,7 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireViewer } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { availableSides, requireViewer } from "@/lib/auth";
+import { SIDE_COOKIE, SIDE_COOKIE_OPTIONS, isSide } from "@/lib/side";
 
 export type FormState = { error?: string; ok?: boolean };
 
@@ -58,4 +60,14 @@ export async function reviewApplication(formData: FormData) {
   const approve = formData.get("decision") === "approve";
   await supabase.rpc("review_doctor_application", { application_id: id, approve });
   revalidatePath("/app/admin");
+}
+
+/** Switch between the sides this number holds (patient / doctor / operator / admin). */
+export async function switchSide(formData: FormData) {
+  await requireViewer();
+  const side = formData.get("side");
+  if (isSide(side) && (await availableSides()).includes(side)) {
+    (await cookies()).set(SIDE_COOKIE, side, SIDE_COOKIE_OPTIONS);
+  }
+  redirect("/app");
 }

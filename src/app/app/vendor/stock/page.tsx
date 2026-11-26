@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Boxes, CheckCircle2, Plus } from "lucide-react";
 import { ButtonLink } from "@/components/Button";
-import { requireViewer } from "@/lib/auth";
+import { requireSide, requireViewer } from "@/lib/auth";
 import { deviceTypeLabel } from "@/lib/device-labels";
 import { monthLabel, productLabel } from "@/lib/medicine";
 import type { DeviceType, StockRow } from "@/lib/types";
@@ -53,10 +53,13 @@ function Badges({ r }: { r: StockRow }) {
 }
 
 export default async function StockPage({ searchParams }: PageProps<"/app/vendor/stock">) {
+  const { side } = await requireSide("vendor", "admin");
   const { supabase, profile } = await requireViewer(["vendor", "admin"]);
   const { device, empty, added } = await searchParams;
 
-  const { data: deviceRows } = await supabase.from("machines").select("id, code, name, type").order("name").returns<Device[]>();
+  let deviceQuery = supabase.from("machines").select("id, code, name, type").order("name");
+  if (side !== "admin") deviceQuery = deviceQuery.eq("owner_id", profile.id);
+  const { data: deviceRows } = await deviceQuery.returns<Device[]>();
   const devices = deviceRows ?? [];
   if (devices.length === 0) {
     return (
@@ -102,7 +105,7 @@ export default async function StockPage({ searchParams }: PageProps<"/app/vendor
     <>
       <PageTitle
         title="Stock"
-        subtitle={profile.role === "admin" ? "All operators' devices" : "By device and batch, earliest expiry first"}
+        subtitle={side === "admin" ? "All operators' devices" : "By device and batch, earliest expiry first"}
         action={<ButtonLink href={`/app/vendor/stock/add?device=${current.id}`}><Plus className="h-4 w-4" /> Add stock by hand</ButtonLink>}
       />
 

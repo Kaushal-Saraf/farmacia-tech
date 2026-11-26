@@ -111,10 +111,10 @@ export async function linkDevice(_prev: DeviceFormState, formData: FormData): Pr
 
   const { data, error } = await supabase.rpc("claim_device", { p_code: code, p_pairing_code: pairing });
   if (error || !data) {
-    const known = ["not correct", "registered as a doctor", "sign in again"];
+    const known = ["not correct", "sign in again"];
     return { error: error && known.some((k) => error.message.includes(k)) ? error.message : "Couldn't link the device. Please try again." };
   }
-  revalidatePath("/app", "layout"); // the account may have just become an operator
+  revalidatePath("/app", "layout"); // the number may have just gained the operator role
   redirect(`/app/vendor/${data}`);
 }
 

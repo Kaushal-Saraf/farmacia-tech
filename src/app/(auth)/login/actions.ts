@@ -1,9 +1,11 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { normalisePhone, safeNext } from "@/lib/auth";
 import { isLoginRole } from "./roles";
+import { SIDE_COOKIE, SIDE_COOKIE_OPTIONS } from "@/lib/side";
 
 export type AuthState = { error?: string };
 
@@ -32,11 +34,15 @@ export async function verifyOtp(_prev: AuthState, formData: FormData): Promise<A
   const { error } = await supabase.auth.verifyOtp({ phone, token, type: "sms" });
   if (error) return { error: "That code is wrong or has expired." };
 
+  // The door used to sign in decides which side of the portal opens.
+  const role = formData.get("role");
+  if (isLoginRole(role)) (await cookies()).set(SIDE_COOKIE, role, SIDE_COOKIE_OPTIONS);
   redirect(safeNext(formData.get("next")));
 }
 
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  (await cookies()).delete(SIDE_COOKIE);
   redirect("/");
 }

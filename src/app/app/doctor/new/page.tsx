@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { requireViewer } from "@/lib/auth";
+import { requireSide, requireViewer } from "@/lib/auth";
 import { PageTitle } from "../../ui";
 import { PrescriptionForm } from "./PrescriptionForm";
 
 export const metadata: Metadata = { title: "New prescription" };
 
 export default async function NewPrescriptionPage() {
+  await requireSide("doctor");
   await requireViewer(["doctor"]);
   return (
     <div className="mx-auto max-w-3xl">

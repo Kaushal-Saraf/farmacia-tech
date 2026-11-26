@@ -2,30 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { Role } from "@/lib/types";
+import type { Side } from "@/lib/side";
 
 type Tab = { href: string; label: string };
 
-/** Each kind of account only sees its own tabs. */
-function tabsFor(role: Role, doctorApplicant: boolean): Tab[] {
-  switch (role) {
+/** Only the current side's tabs are shown. */
+function tabsFor(side: Side, isDoctor: boolean, isVendor: boolean): Tab[] {
+  switch (side) {
     case "patient":
-      return doctorApplicant
-        ? [{ href: "/app/doctor", label: "Doctor verification" }]
-        : [
-            { href: "/app/patient", label: "My prescriptions" },
-            { href: "/app/patient/family", label: "My family" },
-          ];
+      return [
+        { href: "/app/patient", label: "My prescriptions" },
+        { href: "/app/patient/family", label: "My family" },
+      ];
     case "doctor":
-      return [
-        { href: "/app/doctor", label: "Prescriptions issued" },
-        { href: "/app/doctor/new", label: "New prescription" },
-      ];
+      return isDoctor
+        ? [
+            { href: "/app/doctor", label: "Prescriptions issued" },
+            { href: "/app/doctor/new", label: "New prescription" },
+          ]
+        : [{ href: "/app/doctor", label: "Doctor verification" }];
     case "vendor":
-      return [
-        { href: "/app/vendor", label: "My devices" },
-        { href: "/app/vendor/stock", label: "Stock" },
-      ];
+      return isVendor
+        ? [
+            { href: "/app/vendor", label: "My devices" },
+            { href: "/app/vendor/stock", label: "Stock" },
+          ]
+        : [{ href: "/app/vendor", label: "Link a device" }];
     case "admin":
       return [
         { href: "/app/admin", label: "Admin" },
@@ -35,9 +37,9 @@ function tabsFor(role: Role, doctorApplicant: boolean): Tab[] {
   }
 }
 
-export function PortalNav({ role, doctorApplicant }: { role: Role; doctorApplicant: boolean }) {
+export function PortalNav({ side, isDoctor, isVendor }: { side: Side; isDoctor: boolean; isVendor: boolean }) {
   const pathname = usePathname();
-  const tabs = tabsFor(role, doctorApplicant);
+  const tabs = tabsFor(side, isDoctor, isVendor);
   // Most specific match wins, so "New prescription" doesn't also light up "Prescriptions issued".
   const active = tabs
     .filter((t) => pathname === t.href || pathname.startsWith(`${t.href}/`))

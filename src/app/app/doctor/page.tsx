@@ -2,16 +2,16 @@ import type { Metadata } from "next";
 import { BadgeCheck, Clock, FilePlus2, FileText, XCircle } from "lucide-react";
 import Link from "next/link";
 import { ButtonLink } from "@/components/Button";
-import { requireViewer } from "@/lib/auth";
+import { hasRole, requireSide } from "@/lib/auth";
 import { Card, Empty, PageTitle } from "../ui";
 import { ApplicationForm } from "./ApplicationForm";
 
 export const metadata: Metadata = { title: "Doctor" };
 
 export default async function DoctorPage() {
-  const { supabase, profile } = await requireViewer(["patient", "doctor", "admin"]);
+  const { supabase, profile } = await requireSide("doctor");
 
-  if (profile.role === "doctor" || profile.role === "admin") {
+  if (hasRole(profile, "doctor")) {
     const { data: issued } = await supabase
       .from("prescriptions")
       .select("id, title, status, created_at, patient_name")

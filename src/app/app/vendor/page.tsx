@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Link2, MapPin, Plus, ScanLine, Server } from "lucide-react";
 import { ButtonLink } from "@/components/Button";
-import { requireViewer } from "@/lib/auth";
+import { hasRole, requireSide } from "@/lib/auth";
 import { deviceTypeLabel, lastSeen } from "@/lib/device-labels";
 import type { DeviceType } from "@/lib/types";
 import { Card, Empty, PageTitle } from "../ui";
@@ -22,11 +22,11 @@ type Device = {
 };
 
 export default async function DevicesPage() {
-  const { supabase, profile } = await requireViewer();
-  const isAdmin = profile.role === "admin";
+  const { supabase, profile, side } = await requireSide("vendor", "admin");
+  const isAdmin = side === "admin";
 
   // Not an operator yet: linking their first device is what makes them one.
-  if (profile.role !== "vendor" && !isAdmin) {
+  if (!isAdmin && !hasRole(profile, "vendor")) {
     return (
       <div className="mx-auto max-w-2xl">
         <PageTitle title="Link your first device" subtitle="Add the vending machine or Medicine Checker you received from Farmacia Tech." />
@@ -35,12 +35,10 @@ export default async function DevicesPage() {
     );
   }
 
-  // Row-level security returns only this operator's devices (admins see all).
-  const { data } = await supabase
-    .from("machines")
-    .select("id, code, name, type, address, is_active, owner_id, last_seen_at")
-    .order("name")
-    .returns<Device[]>();
+  // Operator side: only this number's devices (even if it is also an admin). Admin side: all.
+  let query = supabase.from("machines").select("id, code, name, type, address, is_active, owner_id, last_seen_at").order("name");
+  if (!isAdmin) query = query.eq("owner_id", profile.id);
+  const { data } = await query.returns<Device[]>();
   const devices = data ?? [];
 
   return (

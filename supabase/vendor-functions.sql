@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Farmacia Tech — vendor functions and views
--- Run AFTER vendor-devices.sql. Safe to run again: paste the whole file each
--- time it changes.
+-- Run AFTER vendor-devices.sql and roles.sql. Safe to run again: paste the
+-- whole file each time it changes.
 -- ============================================================================
 
 -- ---------- Dates ------------------------------------------------------------
@@ -91,7 +91,8 @@ returns text language sql immutable set search_path = '' as $$
 $$;
 
 -- Operator links a device. The pairing code works once; a new one is issued only by Farmacia Tech
--- (that is also how a device moves to a new operator). Linking makes a patient-role number an operator.
+-- (that is also how a device moves to a new operator). Linking adds the operator (vendor) role to the
+-- number; it keeps any other roles (a doctor can also run devices). Needs roles.sql.
 create or replace function public.claim_device(p_code text, p_pairing_code text)
 returns uuid language plpgsql security definer set search_path = '' as $$
 declare
@@ -100,9 +101,6 @@ declare
 begin
   select * into me from public.profiles where id = auth.uid();
   if me.id is null then raise exception 'Please sign in again'; end if;
-  if me.role = 'doctor' then
-    raise exception 'This number is registered as a doctor. Please use a different mobile number for your devices.';
-  end if;
 
   -- One message for "no such ID" and "wrong code", so IDs can't be probed.
   select id into dev_id from public.machines
@@ -115,9 +113,7 @@ begin
   update public.machines
      set owner_id = me.id, pairing_code_hash = null, linked_at = now()
    where id = dev_id;
-  if me.role = 'patient' then
-    update public.profiles set role = 'vendor' where id = me.id;
-  end if;
+  update public.profiles set roles = roles || '{vendor}'::public.app_role[] where id = me.id;
   return dev_id;
 end $$;
 revoke execute on function public.claim_device(text, text) from public, anon;
@@ -195,7 +191,7 @@ declare
   pk text := nullif(regexp_replace(btrim(coalesce(p_pack_size, '')), '\s+', ' ', 'g'), '');
   pid uuid;
 begin
-  if public.my_role() not in ('vendor', 'admin') then raise exception 'forbidden'; end if;
+  if not (public.has_role('vendor') or public.is_admin()) then raise exception 'forbidden'; end if;
   if char_length(n) < 2 then raise exception 'Enter the medicine name'; end if;
   select id into pid from public.products
    where lower(btrim(name)) = lower(n) and lower(coalesce(strength, '')) = lower(coalesce(st, ''))
@@ -317,3 +313,10 @@ begin
     execute format('grant execute on function %s to authenticated', f);
   end loop;
 end $$;
+
+-- ============================================================================
+-- Operators (vendor role) may add medicines to the shared list. Needs roles.sql.
+-- ============================================================================
+drop policy if exists "products: vendors add" on public.products;
+create policy "products: vendors add" on public.products for insert to authenticated
+  with check (created_by = auth.uid() and (public.has_role('vendor') or public.is_admin()));

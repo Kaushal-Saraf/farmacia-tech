@@ -24,7 +24,7 @@ export default async function VerifyPage({ searchParams }: PageProps<"/login/ver
         <Link href={back} className="font-semibold text-brand-600 hover:underline">Change number</Link>
       </p>
       <div className="mt-8">
-        <OtpForm phone={normalised} next={safeNext(next)} />
+        <OtpForm phone={normalised} next={safeNext(next)} role={isLoginRole(role) ? role : undefined} />
       </div>
     </>
   );

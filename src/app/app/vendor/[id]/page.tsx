@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ScanLine, Server, Wifi, WifiOff } from "lucide-react";
-import { requireViewer } from "@/lib/auth";
+import { requireSide } from "@/lib/auth";
 import { deviceTypeLabel, lastSeen } from "@/lib/device-labels";
 import type { DeviceType } from "@/lib/types";
 import { setMachineActive } from "../actions";
@@ -32,7 +32,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day
 
 export default async function DevicePage({ params }: PageProps<"/app/vendor/[id]">) {
   const { id } = await params;
-  const { supabase, profile } = await requireViewer(["vendor", "admin"]);
+  const { supabase, profile, side } = await requireSide("vendor", "admin");
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
 
   // Row-level security already limits this to the owner or an admin.
@@ -41,9 +41,8 @@ export default async function DevicePage({ params }: PageProps<"/app/vendor/[id]
     .select("id, code, name, type, address, latitude, longitude, is_active, owner_id, linked_at, last_seen_at, low_stock_at, slots:machine_slots(count)")
     .eq("id", id)
     .maybeSingle<Device>();
-  if (!d || (profile.role === "vendor" && d.owner_id !== profile.id)) notFound();
-
-  const isAdmin = profile.role === "admin";
+  const isAdmin = side === "admin";
+  if (!d || (!isAdmin && d.owner_id !== profile.id)) notFound();
   const seen = lastSeen(d.last_seen_at);
   const Icon = d.type === "vending" ? Server : ScanLine;
   const slotCount = d.slots[0]?.count ?? 0;

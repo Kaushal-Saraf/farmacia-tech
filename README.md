@@ -17,13 +17,15 @@ The marketing site works without Supabase. Sign-in and the `/app` portal show a 
 ## Connect Supabase (≈10 minutes)
 
 1. Create a project at supabase.com. Pick the **Mumbai (ap-south-1)** region so health data stays in India.
-2. **SQL Editor** → paste and run `supabase/schema.sql`, then `supabase/phase2.sql`, then `supabase/vendor-devices.sql` (in that order, each once). Then run `supabase/vendor-functions.sql` and `supabase/family.sql`. That last one is safe to re-run; paste it again whenever it changes.
+2. **SQL Editor** → paste and run, in this order:
+   1. `supabase/schema.sql`, `supabase/phase2.sql`, `supabase/vendor-devices.sql` (once each)
+   2. `supabase/roles.sql`, `supabase/vendor-functions.sql`, `supabase/family.sql`. These three are safe to re-run; paste them again whenever they change, in this order.
 3. **Authentication → Sign In / Providers → Phone**: enable it and connect an SMS provider (Twilio, MessageBird, Vonage or Textlocal).
    For testing without SMS, add test numbers + fixed OTPs under *Phone → Test OTPs*.
 4. **Project Settings → API**: copy the URL and anon key into `.env.local`.
 5. Sign in once on `/login` with your number, then make yourself admin in the SQL editor:
    ```sql
-   update public.profiles set role = 'admin' where phone = '+91XXXXXXXXXX';
+   update public.profiles set roles = roles || '{admin}' where phone = '+91XXXXXXXXXX';
    ```
 
 ## Project layout
@@ -44,7 +46,7 @@ src/
     machine.ts       Machine specs and installation steps
     site.ts          Name, contact email, links — edit this first
   proxy.ts           Refreshes the session and protects /app/*
-supabase/            schema.sql → phase2.sql → vendor-devices.sql (run once each), then vendor-functions.sql (re-runnable)
+supabase/            schema.sql → phase2.sql → vendor-devices.sql (once each), then roles.sql → vendor-functions.sql → family.sql (re-runnable)
 ```
 
 ## Roles
@@ -56,7 +58,7 @@ supabase/            schema.sql → phase2.sql → vendor-devices.sql (run once 
 | vendor | sign in at `/login/vendor` and link a device with its Device ID + pairing code | manage their own devices, stock and scans |
 | admin | set manually in SQL | verify doctors, read enquiries, register devices (Device ID, pairing code, device key) |
 
-`/login` asks which kind of account you have, and each role only sees its own tabs in the portal. One mobile number = one role.
+One mobile number can hold several roles (everyone is a patient; doctor after approval; operator after linking a device; admin by hand). `/login` asks which side you want, and the portal shows only that side; numbers with more than one role get a switcher in the top bar.
 
 Security is enforced in the database (RLS), not just the UI: users can't change their own role, patients only see their own prescriptions, and only verified doctors can insert prescriptions.
 

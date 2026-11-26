@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { FileText, Inbox, Plus, UserCheck } from "lucide-react";
 import { ButtonLink } from "@/components/Button";
-import { requireViewer } from "@/lib/auth";
+import { requireSide, requireViewer } from "@/lib/auth";
 import { reviewApplication } from "../actions";
 import { Card, Empty, PageTitle } from "../ui";
 
 export const metadata: Metadata = { title: "Admin" };
 
 export default async function AdminPage() {
+  await requireSide("admin");
   const { supabase } = await requireViewer(["admin"]);
   const [{ data: apps }, { data: leads }] = await Promise.all([
     supabase

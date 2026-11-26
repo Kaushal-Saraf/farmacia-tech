@@ -2,7 +2,10 @@ export type Role = "patient" | "doctor" | "vendor" | "admin";
 
 export type Profile = {
   id: string;
+  /** Main role (admin > doctor > vendor > patient). Use `roles` to check what the number may do. */
   role: Role;
+  /** Everything this number may do; always includes "patient". */
+  roles: Role[];
   full_name: string | null;
   phone: string | null;
 };

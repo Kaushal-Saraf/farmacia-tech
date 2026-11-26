@@ -5,12 +5,13 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/Button";
 import { verifyOtp, type AuthState } from "../actions";
 
-export function OtpForm({ phone, next }: { phone: string; next: string }) {
+export function OtpForm({ phone, next, role }: { phone: string; next: string; role?: string }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(verifyOtp, {});
   return (
     <form action={action} className="space-y-5">
       <input type="hidden" name="phone" value={phone} />
       <input type="hidden" name="next" value={next} />
+      {role && <input type="hidden" name="role" value={role} />}
       <label className="block text-sm font-medium text-ink">
         6-digit code
         <input

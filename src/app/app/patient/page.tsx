@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FileText, Pill, UserRound } from "lucide-react";
-import { requireViewer } from "@/lib/auth";
+import { requireSide } from "@/lib/auth";
 import { drName, relationLabel } from "@/lib/family";
 import type { Relation } from "@/lib/types";
 import { Card, Empty, PageTitle } from "../ui";
@@ -29,7 +29,7 @@ const statusStyle: Record<string, string> = {
 };
 
 export default async function PatientPage({ searchParams }: PageProps<"/app/patient">) {
-  const { supabase, profile } = await requireViewer();
+  const { supabase, profile } = await requireSide("patient");
   const { member } = await searchParams;
   const [{ data }, { data: family }] = await Promise.all([
     supabase
