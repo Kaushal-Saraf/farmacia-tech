@@ -2,6 +2,8 @@
 
 This is the contract between the website and the device software. Both sides follow it exactly; change it here first.
 
+**Version 1.1 (14 Nov 2026), implemented 26 Nov 2026** in `supabase/vendor-functions.sql` (step 4) and `src/app/api/device/`. Test without hardware: `node scripts/fake-checker.mjs --url http://localhost:3000 --key ftk_…`.
+
 **Version 1.1 (14 Nov 2026).** Changes from 1.0:
 - REVIEW and REFUSE scans may have no medicine name (`productId: null`, `productName: ""`), because the checker has no keyboard. The owner sets the product on the website. ACCEPT still requires `productName`.
 - `matchedMaster: true` plus fields with status `from_record` is a valid ACCEPT. The server never downgrades it because of those fields.
@@ -66,7 +68,8 @@ Everything the device needs to work offline.
 
 - `batches` contains every **confirmed** batch in the shared master (`confirmed_on_device` or `confirmed_on_website`).
 - `stock` is this device's own stock, including unverified batches, which are marked `notConfirmed: true`.
-- `lockReason` is `"expired"`, `"recalled"` or `null`. A locked batch must never be accepted as sellable.
+- `lockReason` is `"expired"`, `"recalled"` or `null`. A locked batch must never be accepted as sellable. (For a vending machine, stock rows can also be locked with `"not_confirmed"`: unverified batches are never dispensed.)
+- A device restock scan adds to that batch's existing stock row on the device (whatever its shelf); the owner can set shelves on the website.
 
 ## 4. `POST /api/device/events`
 
@@ -118,7 +121,7 @@ Field status values:
 
 | Status | Device should |
 |---|---|
-| `saved` | Mark the event done. |
+| `saved` | Mark the event done. The result also has `decision`: what the server applied (ACCEPT, REVIEW or REFUSE). |
 | `duplicate` | Mark it done. The server already had this `eventId`; resending is always safe. |
 | `rejected` | Keep it with the error and don't retry. |
 
