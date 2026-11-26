@@ -34,6 +34,7 @@ The marketing site works without Supabase. Sign-in and the `/app` portal show a 
 ```
 src/
   app/
+    api/device/      Device API: snapshot + events (docs/device-api.md)
     (marketing)/     Public site: home, how-it-works, machine, locations, for-pharmacies, for-doctors, about, faq, updates, contact, privacy, terms
     (auth)/login/    Pick patient / doctor / operator → phone number → OTP (roles.ts holds the three doors)
     app/             Signed-in portal: patient · doctor · vendor · admin
@@ -47,8 +48,33 @@ src/
     machine.ts       Machine specs and installation steps
     site.ts          Name, contact email, links — edit this first
   proxy.ts           Refreshes the session and protects /app/*
+scripts/             fake-checker.mjs: pretends to be a Medicine Checker
+docs/                device-api.md: the device contract
 supabase/            schema.sql → phase2.sql → vendor-devices.sql (once each), then roles.sql → vendor-functions.sql → family.sql (re-runnable)
 ```
+
+## Operator (vendor) portal and devices
+
+An operator can own two kinds of device, both registered by Farmacia Tech (Admin → Register device gives a Device ID, a one-time pairing code and a device key) and linked by the operator with the Device ID + pairing code:
+
+- **Vending machine** — dispenses prescriptions (checkout and QR are Phase 3).
+- **Medicine Checker** — a camera bench on a Raspberry Pi that reads batch number, MFD, EXP and MRP from a strip.
+
+Portal tabs for operators: **My devices** (location, last seen, low-stock level) · **Stock** (per device, by batch; set count, record sold, remove, add by hand) · **Review** (scans that need a decision: confirm, correct or delete) · **Sell first** (earliest-expiry batch per medicine) · **Alerts** (expired/recalled stock to remove, expiring in 30/60/90 days, low stock, removal log) · **Scan log** (filter by device, date, result; reject bin). Admins also get **Recalls**.
+
+Product and batch facts are shared by all operators; devices, stock and scans are private to each operator. Every stock change is logged.
+
+### Device API
+
+`GET /api/device/snapshot` and `POST /api/device/events`, with the key in `X-Device-Key`. The full contract (formats, every field, what the server does with each scan) is in [`docs/device-api.md`](docs/device-api.md).
+
+Test without the hardware:
+
+```bash
+node scripts/fake-checker.mjs --url http://localhost:3000 --key ftk_your_device_key
+```
+
+It downloads the snapshot, sends one scan of each kind, checks that a resent event is a duplicate and a wrong device ID is rejected, and prints the device's stock afterwards.
 
 ## Roles
 
@@ -67,7 +93,8 @@ Security is enforced in the database (RLS), not just the UI: users can't change 
 
 - **Phase 1 ✓** marketing site, phone-OTP auth, roles, doctor verification, admin review, contact leads.
 - **Phase 2 ✓** prescription writer (patient lookup by phone), printable prescriptions, doctor document upload (private storage), machines: create, assign operator, stock sheet with low-stock/expiry flags, public machine locator.
-- **Phase 3:** Razorpay checkout, stock reservation, signed single-use QR tokens, authenticated ESP32 dispense API, live inventory + expiry alerts.
+- **Vendor ✓** devices (vending machine + Medicine Checker) with self-linking, shared medicine master, batch-level stock, device API with offline sync, review, scan log, sell-first, expiry and low-stock alerts, recalls; family members on one number; several roles per number; three-factor admin.
+- **Phase 3:** Razorpay checkout, stock reservation, signed single-use QR tokens, vending-machine dispense API.
 
 ## Deploy
 
