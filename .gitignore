@@ -43,3 +43,9 @@ next-env.d.ts
 
 # screenshots/files saved by Claude
 /Claude outputs/
+
+# python
+__pycache__/
+*.pyc
+ft-data/
+config.json
