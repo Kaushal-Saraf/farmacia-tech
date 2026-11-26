@@ -27,6 +27,7 @@ The marketing site works without Supabase. Sign-in and the `/app` portal show a 
    ```sql
    update public.profiles set roles = roles || '{admin}' where phone = '+91XXXXXXXXXX';
    ```
+6. **Authentication → Multi-Factor**: make sure **TOTP (authenticator app)** is enabled. Opening the Admin side (top-bar switch) asks for three factors every sign-in: the SMS code, a 6-digit code from an authenticator app (set up on first use), and an admin PIN (chosen on first use, asked again every 30 minutes, locked for 15 minutes after 5 wrong tries). The database refuses admin actions unless all three passed, and every admin action is logged on the Admin page. A lost authenticator app can be removed in Authentication → Users → the user → MFA factors.
 
 ## Project layout
 

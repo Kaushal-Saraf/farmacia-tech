@@ -72,11 +72,37 @@ export async function requireViewer(roles?: Role[]) {
   return viewer;
 }
 
-/** Pages belong to one side: opening one from another side goes back to the current side's home. */
+export type AdminStatus = {
+  has_role: boolean;
+  aal: string | null;
+  has_pin: boolean;
+  locked_until: string | null;
+  unlocked_until: string | null;
+};
+
+/** Where this session stands on the three admin factors (SMS sign-in, authenticator app, PIN). */
+export const getAdminStatus = cache(async (): Promise<AdminStatus | null> => {
+  const viewer = await getViewer();
+  if (!viewer) return null;
+  const { data, error } = await viewer.supabase.rpc("admin_status");
+  if (error) {
+    // roles.sql not run yet: the database still only checks the admin role.
+    return ["PGRST202", "42883"].includes(error.code ?? "")
+      ? { has_role: hasRole(viewer.profile, "admin"), aal: null, has_pin: false, locked_until: null, unlocked_until: "unknown" }
+      : null;
+  }
+  return data as AdminStatus;
+});
+
+/**
+ * Pages belong to one side: opening one from another side goes back to the current side's home.
+ * The admin side also needs the authenticator app and the admin PIN for this session.
+ */
 export async function requireSide(...allowed: Side[]) {
   const viewer = await requireViewer();
   const side = await getSide();
   if (!allowed.includes(side)) redirect("/app");
+  if (side === "admin" && !(await getAdminStatus())?.unlocked_until) redirect("/app/admin/verify");
   return { ...viewer, side };
 }
 

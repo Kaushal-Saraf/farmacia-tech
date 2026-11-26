@@ -1,23 +1,40 @@
 import type { Metadata } from "next";
-import { FileText, Inbox, Plus, UserCheck } from "lucide-react";
+import { FileText, History, Inbox, Lock, Plus, ShieldCheck, UserCheck } from "lucide-react";
 import { ButtonLink } from "@/components/Button";
-import { requireSide, requireViewer } from "@/lib/auth";
+import { getAdminStatus, requireSide, requireViewer } from "@/lib/auth";
+import { lockAdmin } from "./verify/actions";
 import { reviewApplication } from "../actions";
 import { Card, Empty, PageTitle } from "../ui";
 
 export const metadata: Metadata = { title: "Admin" };
 
+const auditLabel: Record<string, string> = {
+  admin_unlocked: "Admin unlocked with PIN",
+  admin_pin_set: "Admin PIN set",
+  admin_pin_changed: "Admin PIN changed",
+  admin_pin_wrong: "Wrong admin PIN",
+  admin_pin_locked: "Admin locked after wrong PINs",
+  doctor_approved: "Doctor approved",
+  doctor_rejected: "Doctor rejected",
+  device_registered: "Device registered",
+  device_key_reset: "New device key",
+  pairing_code_reset: "New pairing code",
+};
+
 export default async function AdminPage() {
   await requireSide("admin");
   const { supabase } = await requireViewer(["admin"]);
-  const [{ data: apps }, { data: leads }] = await Promise.all([
+  const status = await getAdminStatus();
+  const [{ data: apps }, { data: leads }, { data: audit }] = await Promise.all([
     supabase
       .from("doctor_applications")
       .select("id, full_name, registration_no, council, qualification, document_path, created_at")
       .eq("status", "pending")
       .order("created_at"),
     supabase.from("leads").select("id, name, email, phone, organisation, type, message, created_at").order("created_at", { ascending: false }).limit(25),
+    supabase.from("admin_audit").select("id, action, target, created_at").order("id", { ascending: false }).limit(20),
   ]);
+  const unlockedUntil = status?.unlocked_until && status.unlocked_until !== "unknown" ? new Date(status.unlocked_until) : null;
 
   // Short-lived links to each applicant's private document.
   const docLinks = new Map<string, string>();
@@ -37,6 +54,19 @@ export default async function AdminPage() {
         subtitle="Verify doctors, register devices and follow up on enquiries."
         action={<ButtonLink href="/app/vendor/new" variant="secondary"><Plus className="h-4 w-4" /> Register device</ButtonLink>}
       />
+
+      {unlockedUntil && (
+        <div className="-mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 ring-1 ring-emerald-200">
+          <span className="inline-flex items-center gap-2 font-medium">
+            <ShieldCheck className="h-4 w-4" /> Admin unlocked until {unlockedUntil.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+          <form action={lockAdmin}>
+            <button className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold text-emerald-900 ring-1 ring-inset ring-emerald-300 hover:bg-emerald-100">
+              <Lock className="h-3.5 w-3.5" /> Lock now
+            </button>
+          </form>
+        </div>
+      )}
 
       <h2 className="mb-4 text-lg font-bold text-ink">Pending doctor verifications</h2>
       {!apps?.length ? (
@@ -93,6 +123,25 @@ export default async function AdminPage() {
               ))}
             </tbody>
           </table>
+        </Card>
+      )}
+
+      <h2 className="mb-4 mt-12 flex items-center gap-2 text-lg font-bold text-ink"><History className="h-5 w-5 text-brand-500" /> Admin activity</h2>
+      {!audit?.length ? (
+        <p className="text-sm text-muted">Nothing yet.</p>
+      ) : (
+        <Card className="p-0">
+          <ul className="divide-y divide-line text-sm">
+            {audit.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5">
+                <span className="text-ink">
+                  {auditLabel[a.action] ?? a.action}
+                  {a.target && <span className="ml-1 font-mono text-xs text-muted">{a.target.length > 20 ? `${a.target.slice(0, 8)}…` : a.target}</span>}
+                </span>
+                <span className="text-xs text-muted">{new Date(a.created_at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
     </>

@@ -130,6 +130,9 @@ begin
      set device_key_hash   = coalesce(p_key_hash, device_key_hash),
          pairing_code_hash = coalesce(p_pairing_hash, pairing_code_hash)
    where id = p_machine_id;
+  perform public.admin_log(
+    case when p_key_hash is not null then 'device_key_reset' else 'pairing_code_reset' end,
+    (select code from public.machines where id = p_machine_id));
 end $$;
 revoke execute on function public.set_device_secrets(uuid, text, text) from public, anon;
 grant execute on function public.set_device_secrets(uuid, text, text) to authenticated;
