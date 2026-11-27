@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Farmacia Tech device client: reference implementation of docs/device-api.md (version 1.2).
+Farmacia Tech device client: reference implementation of modules/5-devices/device-api.md (version 1.2).
 
 Standard library only (Python 3.9+, e.g. Raspberry Pi OS). Drop this file into the device software and use
 `DeviceClient`, or run it from the command line to test the connection:
@@ -50,7 +50,7 @@ MAX_BATCH = 100
 log = logging.getLogger("ft-device")
 
 # ---------------------------------------------------------------------------
-# Formats (docs/device-api.md §2). The server rejects or downgrades anything else.
+# Formats (modules/5-devices/device-api.md §2). The server rejects or downgrades anything else.
 # ---------------------------------------------------------------------------
 BATCH_RE = re.compile(r"^[A-Z0-9][A-Z0-9./-]{0,39}$")
 YM_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
@@ -253,7 +253,7 @@ class DeviceClient:
     def make_event(self, mode: str, decision: str, *, product_id: Optional[str] = None, product_name: str = "",
                    fields: Optional[dict] = None, matched_master: bool = False, reason: str = "", person_answer: str = "",
                    quantity: int = 1, sold: bool = False, attempts: int = 1, seconds: float = 0.0) -> dict:
-        """Builds a valid event (docs/device-api.md §4). Raises ValueError for anything the server would reject."""
+        """Builds a valid event (modules/5-devices/device-api.md §4). Raises ValueError for anything the server would reject."""
         if mode not in ("restock", "check"):
             raise ValueError("mode must be restock or check")
         if decision not in ("ACCEPT", "REVIEW", "REFUSE"):
@@ -397,7 +397,7 @@ def _load_config(args) -> tuple[str, str]:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Farmacia Tech device client (docs/device-api.md v1.2)")
+    ap = argparse.ArgumentParser(description="Farmacia Tech device client (modules/5-devices/device-api.md v1.2)")
     ap.add_argument("command", choices=["health", "ping", "snapshot", "selftest", "upload", "status", "run"])
     ap.add_argument("--config", default="config.json")
     ap.add_argument("--url")

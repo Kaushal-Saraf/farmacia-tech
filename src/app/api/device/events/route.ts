@@ -4,7 +4,7 @@ const MAX_EVENTS = 100;
 const MAX_BYTES = 1_000_000;
 
 /**
- * POST /api/device/events — upload scan events (docs/device-api.md §4–5).
+ * POST /api/device/events — upload scan events (modules/5-devices/device-api.md §4–5).
  * Header: X-Device-Key. Body: { "events": [ … up to 100 … ] }.
  * Each event is checked and saved on its own; the same eventId twice is saved once.
  */

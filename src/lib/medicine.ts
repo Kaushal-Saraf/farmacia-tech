@@ -1,4 +1,4 @@
-/** Formats the device software depends on (see docs/device-api.md). */
+/** Formats the device software depends on (see modules/5-devices/device-api.md). */
 export const BATCH_CODE = /^[A-Z0-9][A-Z0-9./-]{0,39}$/;
 export const YEAR_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 export const MRP = /^\d{1,6}\.\d{2}$/;

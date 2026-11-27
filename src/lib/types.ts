@@ -10,7 +10,7 @@ export type Profile = {
   phone: string | null;
 };
 
-// ---------- Vendor devices & medicine master (supabase/vendor-devices.sql) ----------
+// ---------- Devices, stock and the medicine list (modules/5-devices) ----------
 export type DeviceType = "vending" | "checker";
 export type BatchSource = "confirmed_on_device" | "confirmed_on_website" | "unverified";
 export type ScanMode = "restock" | "check";
@@ -48,7 +48,7 @@ export type StockRow = {
   lock_reason: LockReason | null;
 };
 
-// ---------- Family members on one mobile number (supabase/family.sql) ----------
+// ---------- Family members on one mobile number (modules/3-patients) ----------
 export type Relation = "self" | "spouse" | "son" | "daughter" | "father" | "mother" | "other";
 export type Gender = "male" | "female" | "other";
 

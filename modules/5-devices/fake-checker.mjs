@@ -2,12 +2,12 @@
 /**
  * Pretends to be a Medicine Checker, so the website can be tested before the real device is ready.
  *
- *   node scripts/fake-checker.mjs --url http://localhost:3000 --key ftk_xxxxxxxx
+ *   node modules/5-devices/fake-checker.mjs --url http://localhost:3000 --key ftk_xxxxxxxx
  *
  * Get the key by registering a Medicine Checker on the website (Admin → Register device), then link it
  * to an operator account. For a useful run, add at least one medicine first (operator → Stock → Add stock).
  *
- * It downloads the snapshot, then sends one scan event of each kind (see docs/device-api.md), resends one
+ * It downloads the snapshot, then sends one scan event of each kind (see modules/5-devices/device-api.md), resends one
  * (must come back "duplicate") and sends one with the wrong device ID (must be "rejected"). Then it prints
  * the device's stock as the server now sees it. Afterwards look at Stock, Review and Scan log on the website.
  * Nothing here is stored on the computer.
@@ -20,7 +20,7 @@ const args = Object.fromEntries(
 const BASE = (args.url ?? process.env.FT_URL ?? "http://localhost:3000").replace(/\/$/, "");
 const KEY = args.key ?? process.env.FT_DEVICE_KEY;
 if (!KEY) {
-  console.error("Usage: node scripts/fake-checker.mjs --url http://localhost:3000 --key ftk_xxxxxxxx");
+  console.error("Usage: node modules/5-devices/fake-checker.mjs --url http://localhost:3000 --key ftk_xxxxxxxx");
   process.exit(1);
 }
 

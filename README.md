@@ -1,99 +1,52 @@
-# Farmacia Tech — website & platform
+# Farmacia Tech: website & platform
 
-AI-guided medicine vending: doctors issue e-prescriptions, patients pay online, and the machine dispenses against a single-use QR code.
+AI-guided medicine vending. Doctors issue e-prescriptions to a patient's family member; operators run vending machines and Medicine Checkers; Farmacia Tech staff verify doctors and register devices.
 
-**Stack:** Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · Supabase (Postgres, phone-OTP auth, row-level security) · deploy on Vercel.
+**Stack:** Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · Supabase (Postgres, sign-in, row-level security) · Vercel.
+
+## The five parts
+
+The platform is split into modules. Each has its own database file and a one-page guide. **Start here: [`modules/README.md`](modules/README.md).**
+
+| # | Module | In one line |
+|---|---|---|
+| 1 | [accounts](modules/1-accounts/README.md) | sign-in and roles |
+| 2 | [admin](modules/2-admin/README.md) | admin sign-in (email + authenticator), doctors, enquiries, devices |
+| 3 | [patients](modules/3-patients/README.md) | family members, reading prescriptions |
+| 4 | [doctors](modules/4-doctors/README.md) | doctor verification, writing prescriptions |
+| 5 | [devices](modules/5-devices/README.md) | vending machines, Medicine Checkers, stock, device API |
 
 ## Run it locally
 
 ```bash
 npm install
-cp .env.example .env.local   # add Supabase keys (optional for the marketing pages)
+cp .env.example .env.local   # add the Supabase URL and the publishable (anon) key
 npm run dev                  # http://localhost:3000
 ```
 
-The marketing site works without Supabase. Sign-in and the `/app` portal show a setup notice until the keys are added.
+The public website works without Supabase. Sign-in and the portal need it.
 
-## Connect Supabase (≈10 minutes)
+## Set up Supabase
 
-1. Create a project at supabase.com. Pick the **Mumbai (ap-south-1)** region so health data stays in India.
-2. **SQL Editor** → paste and run, in this order:
-   1. `supabase/schema.sql`, `supabase/phase2.sql`, `supabase/vendor-devices.sql` (once each)
-   2. `supabase/roles.sql`, `supabase/vendor-functions.sql`, `supabase/family.sql`. These three are safe to re-run; paste them again whenever they change, in this order.
-3. **Authentication → Sign In / Providers → Phone**: enable it and connect an SMS provider (Twilio, MessageBird, Vonage or Textlocal).
-   For testing without SMS, add test numbers + fixed OTPs under *Phone → Test OTPs*.
-4. **Project Settings → API**: copy the URL and anon key into `.env.local`.
-5. **Admin is an email account, never a mobile number.** In **Authentication → Users → Add user → Create new user**, enter `medvendors01@gmail.com` (tick *Auto Confirm User*). Then re-run `supabase/roles.sql`: it makes that account admin and removes admin from every other account. (To use a different admin email, add it to `public.admin_emails` and re-run.)
-6. **Authentication → Providers → Email**: enabled. **Authentication → Emails → Magic Link** template: make sure it contains `{{ .Token }}` (the 6-digit code), e.g. `Your Farmacia Tech admin code is {{ .Token }}`. **Authentication → Multi-Factor**: TOTP (authenticator app) enabled. Admin signs in at `/login/admin`: a code by email, then the authenticator app (set up on first use, asked again every 12 hours). The database refuses admin actions unless both passed, and admin actions are logged on the Admin page.
-
-## Project layout
-
-```
-src/
-  app/
-    api/device/      Device API: snapshot + events (docs/device-api.md)
-    (marketing)/     Public site: home, how-it-works, machine, locations, for-pharmacies, for-doctors, about, faq, updates, contact, privacy, terms
-    (auth)/login/    Pick patient / doctor / operator → phone number → OTP (roles.ts holds the three doors)
-    app/             Signed-in portal: patient · doctor · vendor · admin
-  components/        Logo, header, footer, buttons, hero illustration
-  lib/
-    supabase/        Server client + session refresh used by src/proxy.ts
-    auth.ts          getViewer / requireViewer(role) helpers
-    content.ts       Shared marketing copy (steps, features)
-    faq.ts           FAQ questions and answers
-    updates.ts       News & milestones (add new posts at the top)
-    machine.ts       Machine specs and installation steps
-    site.ts          Name, contact email, links — edit this first
-  proxy.ts           Refreshes the session and protects /app/*
-scripts/             fake-checker.mjs: pretends to be a Medicine Checker
-hardware/            ft_device_client.py: reference Python client for the device
-docs/                device-api.md: the device contract
-supabase/            schema.sql → phase2.sql → vendor-devices.sql (once each), then roles.sql → vendor-functions.sql → family.sql (re-runnable)
-```
-
-## Operator (vendor) portal and devices
-
-An operator can own two kinds of device, both registered by Farmacia Tech (Admin → Register device gives a Device ID, a one-time pairing code and a device key) and linked by the operator with the Device ID + pairing code:
-
-- **Vending machine** — dispenses prescriptions (checkout and QR are Phase 3).
-- **Medicine Checker** — a camera bench on a Raspberry Pi that reads batch number, MFD, EXP and MRP from a strip.
-
-Portal tabs for operators: **My devices** (location, last seen, low-stock level) · **Stock** (per device, by batch; set count, record sold, remove, add by hand) · **Review** (scans that need a decision: confirm, correct or delete) · **Sell first** (earliest-expiry batch per medicine) · **Alerts** (expired/recalled stock to remove, expiring in 30/60/90 days, low stock, removal log) · **Scan log** (filter by device, date, result; reject bin). Admins also get **Recalls**.
-
-Product and batch facts are shared by all operators; devices, stock and scans are private to each operator. Every stock change is logged.
-
-### Device API
-
-`GET /api/device/health` (no key), `GET /api/device/ping` (heartbeat with `snapshotVersion`), `GET /api/device/snapshot` and `POST /api/device/events`, with the key in `X-Device-Key`. On the live site the base URL is `https://farmacia-tech.vercel.app`; registering a device on the admin page shows a ready-made `config.json`. A reference Python client for the Raspberry Pi is in [`hardware/`](hardware/). The full contract (formats, every field, what the server does with each scan) is in [`docs/device-api.md`](docs/device-api.md).
-
-Test without the hardware:
-
-```bash
-node scripts/fake-checker.mjs --url http://localhost:3000 --key ftk_your_device_key
-```
-
-It downloads the snapshot, sends one scan of each kind, checks that a resent event is a duplicate and a wrong device ID is rejected, and prints the device's stock afterwards.
-
-## Roles
-
-| Role | How you get it | Can |
-|---|---|---|
-| patient | sign in at `/login/patient` (default for new numbers) | see the prescriptions of everyone on their number; manage family members |
-| doctor | sign in at `/login/doctor`, submit registration, admin approves | issue prescriptions to a family member found by mobile number |
-| vendor | sign in at `/login/vendor` and link a device with its Device ID + pairing code | manage their own devices, stock and scans |
-| admin | the email account(s) in `admin_emails` only, signing in at `/login/admin` | verify doctors, read enquiries, register devices (Device ID, pairing code, device key) |
-
-One mobile number can hold several roles (everyone is a patient; doctor after approval; operator after linking a device; admin by hand). `/login` asks which side you want, and the portal shows only that side; numbers with more than one role get a switcher in the top bar.
-
-Security is enforced in the database (RLS), not just the UI: users can't change their own role, patients only see their own prescriptions, and only verified doctors can insert prescriptions.
-
-## Roadmap
-
-- **Phase 1 ✓** marketing site, phone-OTP auth, roles, doctor verification, admin review, contact leads.
-- **Phase 2 ✓** prescription writer (patient lookup by phone), printable prescriptions, doctor document upload (private storage), machines: create, assign operator, stock sheet with low-stock/expiry flags, public machine locator.
-- **Vendor ✓** devices (vending machine + Medicine Checker) with self-linking, shared medicine master, batch-level stock, device API with offline sync, review, scan log, sell-first, expiry and low-stock alerts, recalls; family members on one number; several roles per number; three-factor admin.
-- **Phase 3:** Razorpay checkout, stock reservation, signed single-use QR tokens, vending-machine dispense API.
+1. Create a project (region **Mumbai, ap-south-1**).
+2. **SQL Editor:** run `modules/1-accounts/database.sql`, then 2, 3, 4, 5. Every file is safe to run again.
+3. Follow the **Set up** section of each module's README (phone sign-in, admin email and authenticator, and so on).
 
 ## Deploy
 
-Push to GitHub → import on vercel.com → add the three env vars → deploy. In Supabase → Authentication → URL configuration, set the Site URL to your domain.
+Pushing to `main` deploys on Vercel. In Vercel → Settings → Environment Variables set:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the **publishable** key, never the secret key)
+- `NEXT_PUBLIC_SITE_URL`
+
+## Folders
+
+```
+modules/        the five parts: database.sql + README.md each (device software in 5-devices)
+src/app/        website pages
+  (marketing)/  public site (home, how it works, contact, …)
+  (auth)/login  sign-in pages (module 1; admin sign-in is module 2)
+  app/          the portal: admin/, patient/, doctor/, vendor/ (modules 2–5)
+  api/device/   the device API (module 5)
+src/lib/        shared helpers (each module README lists which are its own)
+```

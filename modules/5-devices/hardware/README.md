@@ -1,6 +1,6 @@
 # Device software helpers
 
-`ft_device_client.py` is a reference client for the device API ([`docs/device-api.md`](../docs/device-api.md), v1.2). Python 3.9+, standard library only, so it runs on a stock Raspberry Pi OS.
+`ft_device_client.py` is a reference client for the device API ([`../device-api.md`](../device-api.md), v1.2). Python 3.9+, standard library only, so it runs on a stock Raspberry Pi OS.
 
 ## Set up a device
 

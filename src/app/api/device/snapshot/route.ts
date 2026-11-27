@@ -1,7 +1,7 @@
 import { deviceDb, deviceKey, json, notConfigured, unauthorised } from "@/lib/device-api";
 
 /**
- * GET /api/device/snapshot — everything a device needs to work offline (docs/device-api.md §3).
+ * GET /api/device/snapshot — everything a device needs to work offline (modules/5-devices/device-api.md §3).
  * Header: X-Device-Key. 401 for an unknown key or a deactivated device.
  */
 export async function GET(request: Request) {

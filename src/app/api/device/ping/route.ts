@@ -1,7 +1,7 @@
 import { deviceDb, deviceKey, json, notConfigured, unauthorised } from "@/lib/device-api";
 
 /**
- * GET /api/device/ping — small heartbeat, every `pollSeconds` (docs/device-api.md §3a).
+ * GET /api/device/ping — small heartbeat, every `pollSeconds` (modules/5-devices/device-api.md §3a).
  * Returns the server time and `snapshotVersion`; download the full snapshot only when it changes.
  */
 export async function GET(request: Request) {

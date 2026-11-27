@@ -2,9 +2,9 @@
 
 This is the contract between the website and the device software. Both sides follow it exactly; change it here first.
 
-**Version 1.2 (26 Nov 2026).** Implemented in `supabase/vendor-functions.sql` and `src/app/api/device/`.
-Reference device client (Python, standard library only): [`hardware/ft_device_client.py`](../hardware/ft_device_client.py).
-Server test without hardware: `node scripts/fake-checker.mjs --url <base URL> --key ftk_…`.
+**Version 1.2 (26 Nov 2026).** Implemented in `modules/5-devices/database.sql` (the `device_*` functions) and `src/app/api/device/`.
+Reference device client (Python, standard library only): [`hardware/ft_device_client.py`](hardware/ft_device_client.py).
+Server test without hardware: `node modules/5-devices/fake-checker.mjs --url <base URL> --key ftk_…`.
 
 Changes in 1.2:
 - `GET /api/device/health` (no key) to check the network and the server clock.

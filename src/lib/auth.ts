@@ -19,7 +19,7 @@ export const getViewer = cache(async () => {
   let profile = first.data;
   const error = first.error;
   if (error?.code === "42703") {
-    // supabase/roles.sql hasn't been run yet: treat the single role as the list.
+    // modules/1-accounts/database.sql hasn't been run yet: treat the single role as the list.
     const old = await supabase.from("profiles").select("id, role, full_name, phone").eq("id", user.id).single<Omit<Profile, "roles">>();
     profile = old.data && { ...old.data, roles: [...new Set<Role>(["patient", old.data.role])] };
   }
@@ -80,9 +80,6 @@ export type AdminStatus = {
   /** Admin email account + authenticator app in the last 12 hours: what the database calls is_admin(). */
   verified: boolean;
   aal: string | null;
-  has_pin: boolean;
-  locked_until: string | null;
-  unlocked_until: string | null;
 };
 
 /** Where this session stands on the admin factors (email code at sign-in, authenticator app). */
@@ -91,9 +88,9 @@ export const getAdminStatus = cache(async (): Promise<AdminStatus | null> => {
   if (!viewer) return null;
   const { data, error } = await viewer.supabase.rpc("admin_status");
   if (error) {
-    // roles.sql not run yet: the database still only checks the admin role.
+    // modules/2-admin/database.sql not run yet: the database still only checks the admin role.
     return ["PGRST202", "42883"].includes(error.code ?? "")
-      ? { has_role: hasRole(viewer.profile, "admin"), verified: hasRole(viewer.profile, "admin"), aal: null, has_pin: false, locked_until: null, unlocked_until: null }
+      ? { has_role: hasRole(viewer.profile, "admin"), verified: hasRole(viewer.profile, "admin"), aal: null }
       : null;
   }
   return data as AdminStatus;

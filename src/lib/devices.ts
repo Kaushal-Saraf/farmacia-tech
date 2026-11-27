@@ -22,7 +22,7 @@ export const newDeviceKey = () => `ftk_${randomBytes(24).toString("base64url")}`
 
 const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
 
-/** Must match public.hash_pairing_code() in vendor-functions.sql. */
+/** Must match public.hash_pairing_code() in modules/5-devices/database.sql. */
 export const hashPairingCode = (code: string) => sha256(code.replace(/[^A-Za-z0-9]/g, "").toUpperCase());
 
 export const hashDeviceKey = (key: string) => sha256(key);

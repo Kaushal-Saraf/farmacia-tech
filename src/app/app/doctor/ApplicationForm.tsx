@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/Button";
-import { applyAsDoctor, type FormState } from "../actions";
+import { applyAsDoctor, type ApplicationState } from "./actions";
 import { inputClass } from "../ui";
 
 const councils = [
@@ -17,7 +17,7 @@ const councils = [
 ];
 
 export function ApplicationForm({ defaults }: { defaults?: Partial<Record<string, string>> }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(applyAsDoctor, {});
+  const [state, action, pending] = useActionState<ApplicationState, FormData>(applyAsDoctor, {});
   if (state.ok) {
     return <p className="rounded-xl bg-brand-50 p-4 text-sm font-medium text-brand-800">Submitted. We'll review your details shortly.</p>;
   }

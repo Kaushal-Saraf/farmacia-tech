@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { FileText, History, Lock, ShieldCheck, UserCheck } from "lucide-react";
 import { getAdminStatus, requireSide, requireViewer } from "@/lib/auth";
 import { lockAdmin } from "./verify/actions";
-import { reviewApplication } from "../actions";
+import { reviewApplication } from "./actions";
 import { Card, Empty, PageTitle } from "../ui";
 
 export const metadata: Metadata = { title: "Doctor verification" };

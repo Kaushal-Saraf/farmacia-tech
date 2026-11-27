@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { normalisePhone, requireViewer } from "@/lib/auth";
 import { parseMember } from "@/lib/family-form";
 import type { FamilyMember } from "@/lib/types";
@@ -97,4 +98,44 @@ export async function createPrescription(_prev: RxState, formData: FormData): Pr
   if (error || !data) return { error: "Couldn't save the prescription. Please try again." };
 
   redirect(`/app/prescriptions/${data}`);
+}
+
+export type ApplicationState = { error?: string; ok?: boolean };
+
+/** A doctor applies (or re-applies) with their registration details and document. */
+export async function applyAsDoctor(_prev: ApplicationState, formData: FormData): Promise<ApplicationState> {
+  const { supabase, profile } = await requireViewer();
+  const app: Record<string, string> = {
+    user_id: profile.id,
+    full_name: String(formData.get("full_name") ?? "").trim(),
+    registration_no: String(formData.get("registration_no") ?? "").trim().toUpperCase(),
+    council: String(formData.get("council") ?? "").trim(),
+    qualification: String(formData.get("qualification") ?? "").trim(),
+  };
+  if (app.full_name.length < 2) return { error: "Enter your name as registered." };
+  if (!/^[A-Z0-9/-]{3,40}$/.test(app.registration_no)) return { error: "Enter a valid registration number." };
+  if (!app.council) return { error: "Select your medical council." };
+  if (app.qualification.length < 2) return { error: "Enter your qualification (e.g. MBBS)." };
+
+  const file = formData.get("document");
+  let document_path: string | undefined;
+  if (file instanceof File && file.size > 0) {
+    if (file.size > 4 * 1024 * 1024) return { error: "The document must be under 4 MB." };
+    const ext = { "application/pdf": "pdf", "image/jpeg": "jpg", "image/png": "png" }[file.type];
+    if (!ext) return { error: "Upload a PDF, JPG or PNG." };
+    document_path = `${profile.id}/registration.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("doctor-docs")
+      .upload(document_path, file, { upsert: true, contentType: file.type });
+    if (upErr) return { error: "Couldn't upload the document. Please try again." };
+  }
+
+  const { error } = await supabase
+    .from("doctor_applications")
+    .upsert(document_path ? { ...app, document_path } : app, { onConflict: "user_id" });
+  if (error) return { error: "Couldn't submit. Please try again." };
+  // Doctors skip the "what should we call you" step, so take the name from here.
+  if (!profile.full_name) await supabase.from("profiles").update({ full_name: app.full_name }).eq("id", profile.id);
+  revalidatePath("/app", "layout");
+  return { ok: true };
 }
