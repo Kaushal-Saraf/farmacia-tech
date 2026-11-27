@@ -23,11 +23,8 @@ The marketing site works without Supabase. Sign-in and the `/app` portal show a 
 3. **Authentication → Sign In / Providers → Phone**: enable it and connect an SMS provider (Twilio, MessageBird, Vonage or Textlocal).
    For testing without SMS, add test numbers + fixed OTPs under *Phone → Test OTPs*.
 4. **Project Settings → API**: copy the URL and anon key into `.env.local`.
-5. Sign in once on `/login` with your number, then make yourself admin in the SQL editor:
-   ```sql
-   update public.profiles set roles = roles || '{admin}' where phone = '+91XXXXXXXXXX';
-   ```
-6. **Authentication → Multi-Factor**: make sure **TOTP (authenticator app)** is enabled. Opening the Admin side (top-bar switch) asks for three factors every sign-in: the SMS code, a 6-digit code from an authenticator app (set up on first use), and an admin PIN (chosen on first use, asked again every 30 minutes, locked for 15 minutes after 5 wrong tries). The database refuses admin actions unless all three passed, and every admin action is logged on the Admin page. A lost authenticator app can be removed in Authentication → Users → the user → MFA factors.
+5. **Admin is an email account, never a mobile number.** In **Authentication → Users → Add user → Create new user**, enter `medvendors01@gmail.com` (tick *Auto Confirm User*). Then re-run `supabase/roles.sql`: it makes that account admin and removes admin from every other account. (To use a different admin email, add it to `public.admin_emails` and re-run.)
+6. **Authentication → Providers → Email**: enabled. **Authentication → Emails → Magic Link** template: make sure it contains `{{ .Token }}` (the 6-digit code), e.g. `Your Farmacia Tech admin code is {{ .Token }}`. **Authentication → Multi-Factor**: TOTP (authenticator app) enabled. Admin signs in at `/login/admin`: a code by email, then the authenticator app (set up on first use, asked again every 12 hours). The database refuses admin actions unless both passed, and admin actions are logged on the Admin page.
 
 ## Project layout
 
@@ -84,7 +81,7 @@ It downloads the snapshot, sends one scan of each kind, checks that a resent eve
 | patient | sign in at `/login/patient` (default for new numbers) | see the prescriptions of everyone on their number; manage family members |
 | doctor | sign in at `/login/doctor`, submit registration, admin approves | issue prescriptions to a family member found by mobile number |
 | vendor | sign in at `/login/vendor` and link a device with its Device ID + pairing code | manage their own devices, stock and scans |
-| admin | set manually in SQL | verify doctors, read enquiries, register devices (Device ID, pairing code, device key) |
+| admin | the email account(s) in `admin_emails` only, signing in at `/login/admin` | verify doctors, read enquiries, register devices (Device ID, pairing code, device key) |
 
 One mobile number can hold several roles (everyone is a patient; doctor after approval; operator after linking a device; admin by hand). `/login` asks which side you want, and the portal shows only that side; numbers with more than one role get a switcher in the top bar.
 

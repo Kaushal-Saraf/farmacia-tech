@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { KeyRound, Loader2, ShieldCheck, Smartphone } from "lucide-react";
+import { Loader2, Smartphone } from "lucide-react";
 import { Button } from "@/components/Button";
-import { setPin, startEnroll, unlockAdmin, verifyCode, type EnrollState, type VerifyState } from "./actions";
+import { startEnroll, verifyCode, type EnrollState, type VerifyState } from "./actions";
 import { inputClass } from "../../ui";
 
 const codeInput = `${inputClass} text-center font-mono text-2xl tracking-[0.4em]`;
@@ -32,7 +32,7 @@ export function EnrollStep() {
       <div className="space-y-4">
         <p className="text-sm text-muted">
           Install an authenticator app on your phone (Google Authenticator, Microsoft Authenticator or similar). You&apos;ll scan a QR code once,
-          then enter its 6-digit code every time you open admin.
+          then enter its 6-digit code each time you sign in to admin (and every 12 hours).
         </p>
         {enroll.error && <p role="alert" className="text-sm text-red-600">{enroll.error}</p>}
         <Button type="button" disabled={starting} onClick={() => start(async () => setEnroll(await startEnroll()))} className="w-full">
@@ -58,42 +58,4 @@ export function EnrollStep() {
 
 export function CodeStep({ factorId }: { factorId: string }) {
   return <CodeForm factorId={factorId} label="6-digit code from your authenticator app" />;
-}
-
-export function SetPinStep() {
-  const [state, action, pending] = useActionState<VerifyState, FormData>(setPin, {});
-  return (
-    <form action={action} className="space-y-4">
-      <p className="text-sm text-muted">Choose an admin PIN (6 to 32 characters) that only you know. You&apos;ll enter it every 30 minutes on the admin side.</p>
-      <label className="block text-sm font-medium text-ink">
-        New PIN
-        <input name="pin" type="password" required minLength={6} maxLength={32} autoComplete="new-password" className={inputClass} />
-      </label>
-      <label className="block text-sm font-medium text-ink">
-        Type it again
-        <input name="confirm" type="password" required minLength={6} maxLength={32} autoComplete="new-password" className={inputClass} />
-      </label>
-      {state.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
-      <Button type="submit" disabled={pending} className="w-full">{pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />} Save PIN and open admin</Button>
-    </form>
-  );
-}
-
-export function PinStep({ lockedUntil }: { lockedUntil: string | null }) {
-  const [state, action, pending] = useActionState<VerifyState, FormData>(unlockAdmin, {});
-  return (
-    <form action={action} className="space-y-4">
-      {lockedUntil && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          Too many wrong PINs. Try again after {new Date(lockedUntil).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}.
-        </p>
-      )}
-      <label className="block text-sm font-medium text-ink">
-        Admin PIN
-        <input name="pin" type="password" required maxLength={32} autoComplete="current-password" autoFocus className={inputClass} />
-      </label>
-      {state.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
-      <Button type="submit" disabled={pending} className="w-full">{pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Open admin</Button>
-    </form>
-  );
 }

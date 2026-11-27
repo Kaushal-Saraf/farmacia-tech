@@ -7,21 +7,36 @@
 --   patient  everyone
 --   doctor   added when an admin approves the doctor application
 --   vendor   added when the number links its first device
---   admin    added by hand:  update public.profiles set roles = roles || '{admin}' where phone = '+91XXXXXXXXXX';
---            Opening the admin side then needs an authenticator app and an admin PIN (see below).
+--   admin    ONLY for the email accounts in public.admin_emails (medvendors01@gmail.com). Mobile numbers
+--            can never be admin. Admin signs in with a code sent to that email, then an authenticator app.
 -- profiles.role is kept as the "main" role (admin > doctor > vendor > patient) for older code.
 -- Which side of the website someone sees is chosen by the sign-in door, not stored here.
 -- ============================================================================
 
 alter table public.profiles add column if not exists roles public.app_role[] not null default '{patient}';
 
+-- The only accounts that may be admin: Supabase users signed up with one of these emails.
+create table if not exists public.admin_emails (email text primary key check (email = lower(btrim(email))));
+alter table public.admin_emails enable row level security;   -- no policies: not readable from the website
+insert into public.admin_emails (email) values ('medvendors01@gmail.com') on conflict do nothing;
+
+create or replace function public.is_admin_email(p_user uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from auth.users u join public.admin_emails a on a.email = lower(u.email) where u.id = p_user)
+$$;
+revoke execute on function public.is_admin_email(uuid) from public, anon, authenticated;
+
 -- Keep roles tidy (always includes patient, no duplicates) and role = the main one.
+-- Admin is removed from any account whose email is not in admin_emails (so never a mobile number).
 create or replace function public.sync_profile_roles()
-returns trigger language plpgsql set search_path = '' as $$
+returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   -- Someone set `role` directly (e.g. the old README admin step): add it to the list.
   if tg_op = 'UPDATE' and new.role is distinct from old.role and not (new.role = any (coalesce(new.roles, '{}'))) then
     new.roles := array_append(new.roles, new.role);
+  end if;
+  if 'admin' = any (coalesce(new.roles, '{}')) and not public.is_admin_email(new.id) then
+    new.roles := array_remove(new.roles, 'admin');
   end if;
   new.roles := coalesce(new.roles, '{}') || '{patient}'::public.app_role[];
   select array_agg(distinct r order by r) into new.roles from unnest(new.roles) as r;
@@ -41,6 +56,12 @@ create trigger profiles_sync_roles before insert or update on public.profiles
 update public.profiles set roles = array['patient', role]::public.app_role[]
  where role <> 'patient' and not (role = any (roles));
 
+-- Admin: the listed email accounts get it; every other account loses it (the trigger enforces this).
+update public.profiles set roles = roles where 'admin' = any (roles) or role = 'admin';
+update public.profiles p
+   set roles = p.roles || '{admin}'::public.app_role[], full_name = coalesce(p.full_name, 'Farmacia Tech admin')
+ where public.is_admin_email(p.id) and not ('admin' = any (p.roles));
+
 -- ---------- Role checks used by rules and functions -------------------------
 create or replace function public.has_role(r public.app_role)
 returns boolean language sql stable security definer set search_path = '' as $$
@@ -48,10 +69,11 @@ returns boolean language sql stable security definer set search_path = '' as $$
 $$;
 grant execute on function public.has_role(public.app_role) to authenticated;
 
--- ---------- Admin needs three factors -----------------------------------------
--- 1. SMS code (normal sign-in)  2. authenticator-app code (session at aal2)  3. admin PIN.
--- is_admin() is true only when all three passed: admin role + aal2 session + a PIN unlock
--- for THIS session that is less than 30 minutes old. Every admin rule and function uses it.
+-- ---------- Admin: email code + authenticator app ----------------------------
+-- Admin signs in with a code sent to its email, then the authenticator app (see is_admin() below).
+-- The PIN tables and functions here are from an earlier version; they are no longer required.
+-- (Earlier: is_admin() needed admin role + aal2 session + a PIN unlock
+-- for THIS session that is less than 30 minutes old.) Every admin rule and function uses is_admin().
 
 create table if not exists public.admin_secrets (
   user_id          uuid primary key references public.profiles (id) on delete cascade,
@@ -84,13 +106,23 @@ returns text language sql stable set search_path = '' as $$
   select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb ->> k
 $$;
 
+-- Admin = an admin-email account (factor 1: code sent to that email) whose session was verified with
+-- the authenticator app (factor 2, aal2) in the last 12 hours.
+create or replace function public.admin_totp_fresh()
+returns boolean language sql stable set search_path = '' as $$
+  select exists (
+    select 1
+      from jsonb_array_elements(coalesce(coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb -> 'amr', '[]'::jsonb)) a
+     where (jsonb_typeof(a) = 'object' and a->>'method' = 'totp'
+            and coalesce((a->>'timestamp')::bigint, 0) > extract(epoch from now())::bigint - 12 * 3600)
+        or (jsonb_typeof(a) = 'string' and a #>> '{}' = 'totp'))
+$$;
+
 create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path = '' as $$
   select public.has_role('admin')
      and public.jwt_claim('aal') = 'aal2'
-     and exists (select 1 from public.admin_unlocks u
-                  where u.session_id = nullif(public.jwt_claim('session_id'), '')::uuid
-                    and u.user_id = auth.uid() and u.expires_at > now())
+     and public.admin_totp_fresh()
 $$;
 
 drop policy if exists "admin audit: admins read" on public.admin_audit;
@@ -107,6 +139,7 @@ create or replace function public.admin_status()
 returns jsonb language sql stable security definer set search_path = '' as $$
   select jsonb_build_object(
     'has_role',       public.has_role('admin'),
+    'verified',       public.is_admin(),
     'aal',            public.jwt_claim('aal'),
     'has_pin',        exists (select 1 from public.admin_secrets where user_id = auth.uid()),
     'locked_until',   (select locked_until from public.admin_secrets where user_id = auth.uid() and locked_until > now()),
@@ -245,3 +278,12 @@ begin
   update public.profiles set roles = roles || '{vendor}'::public.app_role[] where id = uid;
   update public.machines set owner_id = uid where id = p_machine_id;
 end $$;
+
+-- Called by the website right after the authenticator code is accepted.
+create or replace function public.admin_note_verified()
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if public.is_admin() then perform public.admin_log('admin_verified'); end if;
+end $$;
+revoke execute on function public.admin_note_verified() from public, anon;
+grant execute on function public.admin_note_verified() to authenticated;

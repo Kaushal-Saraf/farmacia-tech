@@ -15,13 +15,14 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   if (next.startsWith("/app/doctor")) redirect(`/login/doctor${query}`);
   if (next.startsWith("/app/vendor")) redirect(`/login/vendor${query}`);
   if (next.startsWith("/app/patient")) redirect(`/login/patient${query}`);
+  if (next.startsWith("/app/admin")) redirect("/login/admin");
 
   return (
     <>
       <h1 className="text-2xl font-extrabold tracking-tight text-ink">Sign in to Farmacia Tech</h1>
       <p className="mt-2 text-sm text-muted">Choose how you use Farmacia Tech.</p>
       <ul className="mt-8 space-y-3">
-        {(Object.keys(loginRoles) as LoginRole[]).map((role) => {
+        {(["patient", "doctor", "vendor"] as LoginRole[]).map((role) => {
           const r = loginRoles[role];
           return (
             <li key={role}>
@@ -42,6 +43,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           );
         })}
       </ul>
+      <p className="mt-6 text-center text-xs text-muted">
+        Farmacia Tech staff?{" "}
+        <Link href="/login/admin" className="font-semibold text-brand-600 hover:underline">Admin sign in</Link>
+      </p>
     </>
   );
 }

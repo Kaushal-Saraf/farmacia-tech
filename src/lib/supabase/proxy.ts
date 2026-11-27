@@ -38,6 +38,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Already signed in: skip the login screens. /login/doctor etc. switch to that side.
+  // /login/admin is left alone: admin is a separate email account, so a signed-in phone user may still open it.
   const door = /^\/login(?:\/(patient|doctor|vendor))?$/.exec(pathname);
   // /app itself only forwards to a side's home. Doing that here (not in the page) means the
   // page never renders just to redirect, which also avoids a React dev-mode timing error.

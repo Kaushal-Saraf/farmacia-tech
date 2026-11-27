@@ -9,6 +9,7 @@ import { Card, Empty, PageTitle } from "../ui";
 export const metadata: Metadata = { title: "Admin" };
 
 const auditLabel: Record<string, string> = {
+  admin_verified: "Admin signed in (email + authenticator)",
   admin_unlocked: "Admin unlocked with PIN",
   admin_pin_set: "Admin PIN set",
   admin_pin_changed: "Admin PIN changed",
@@ -34,7 +35,7 @@ export default async function AdminPage() {
     supabase.from("leads").select("id, name, email, phone, organisation, type, message, created_at").order("created_at", { ascending: false }).limit(25),
     supabase.from("admin_audit").select("id, action, target, created_at").order("id", { ascending: false }).limit(20),
   ]);
-  const unlockedUntil = status?.unlocked_until && status.unlocked_until !== "unknown" ? new Date(status.unlocked_until) : null;
+  const verified = Boolean(status?.verified);
 
   // Short-lived links to each applicant's private document.
   const docLinks = new Map<string, string>();
@@ -55,14 +56,14 @@ export default async function AdminPage() {
         action={<ButtonLink href="/app/vendor/new" variant="secondary"><Plus className="h-4 w-4" /> Register device</ButtonLink>}
       />
 
-      {unlockedUntil && (
+      {verified && (
         <div className="-mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 ring-1 ring-emerald-200">
           <span className="inline-flex items-center gap-2 font-medium">
-            <ShieldCheck className="h-4 w-4" /> Admin unlocked until {unlockedUntil.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+            <ShieldCheck className="h-4 w-4" /> Verified with email code and authenticator app
           </span>
           <form action={lockAdmin}>
             <button className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold text-emerald-900 ring-1 ring-inset ring-emerald-300 hover:bg-emerald-100">
-              <Lock className="h-3.5 w-3.5" /> Lock now
+              <Lock className="h-3.5 w-3.5" /> Sign out of admin
             </button>
           </form>
         </div>

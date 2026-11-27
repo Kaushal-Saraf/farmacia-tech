@@ -1,6 +1,6 @@
-import { Server, Stethoscope, User, type LucideIcon } from "lucide-react";
+import { Server, ShieldCheck, Stethoscope, User, type LucideIcon } from "lucide-react";
 
-/** The three ways in. Each has its own sign-in page at /login/<role>. */
+/** The ways in. Each has its own sign-in page at /login/<role>. Admin is a small link, not a card. */
 export const loginRoles = {
   patient: {
     label: "Patient",
@@ -22,6 +22,13 @@ export const loginRoles = {
     icon: Server,
     pitch: "Manage stock, expiry dates and scans on your vending machines and Medicine Checkers.",
     intro: "Sign in with your mobile number, then link your device with the Device ID and pairing code from Farmacia Tech.",
+  },
+  admin: {
+    label: "Admin",
+    title: "Admin sign in",
+    icon: ShieldCheck,
+    pitch: "Farmacia Tech staff: verify doctors, register devices, manage recalls.",
+    intro: "For Farmacia Tech staff. After the SMS code you'll also need your authenticator app and your admin PIN.",
   },
 } satisfies Record<string, { label: string; title: string; icon: LucideIcon; pitch: string; intro: string }>;
 
