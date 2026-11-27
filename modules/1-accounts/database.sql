@@ -84,6 +84,14 @@ drop trigger if exists profiles_sync_roles on public.profiles;
 create trigger profiles_sync_roles before insert or update on public.profiles
   for each row execute function public.sync_profile_roles();
 
+-- Any sign-in that has no profile yet (e.g. created before this file was run) gets one now.
+insert into public.profiles (id, phone)
+select u.id, case when u.phone is null or u.phone = '' then null
+                  when left(u.phone, 1) = '+' then u.phone else '+' || u.phone end
+  from auth.users u
+ where not exists (select 1 from public.profiles p where p.id = u.id)
+on conflict do nothing;
+
 -- Older accounts: their single role becomes the list.
 update public.profiles set roles = array['patient', role]::public.app_role[]
  where role <> 'patient' and not (role = any (roles));
