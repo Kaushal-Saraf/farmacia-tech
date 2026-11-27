@@ -31,7 +31,7 @@ const reviewLabel: Partial<Record<ReviewStatus, string>> = { open: "In review", 
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
 export default async function ScanLogPage({ searchParams }: PageProps<"/app/vendor/scans">) {
-  const { supabase, profile, side } = await requireSide("vendor", "admin");
+  const { supabase, profile, side } = await requireSide("vendor");
   const sp = await searchParams;
   const view = one(sp.view) === "reject" ? "reject" : "all";
   const device = one(sp.device);

@@ -28,7 +28,7 @@ type Item = {
 };
 
 export default async function ReviewPage() {
-  const { supabase, profile, side } = await requireSide("vendor", "admin");
+  const { supabase, profile, side } = await requireSide("vendor");
 
   let query = supabase
     .from("scan_events")

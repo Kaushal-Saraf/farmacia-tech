@@ -35,13 +35,9 @@ function tabsFor(side: Side, isDoctor: boolean, isVendor: boolean, counts: NavCo
         : [{ href: "/app/vendor", label: "Link a device" }];
     case "admin":
       return [
-        { href: "/app/admin", label: "Admin" },
-        { href: "/app/admin/recalls", label: "Recalls" },
+        { href: "/app/admin", label: "Doctors" },
+        { href: "/app/admin/enquiries", label: "Enquiries" },
         { href: "/app/vendor", label: "Devices" },
-        { href: "/app/vendor/stock", label: "Stock" },
-        { href: "/app/vendor/review", label: "Review", count: counts.review },
-        { href: "/app/vendor/alerts", label: "Alerts", count: counts.alerts },
-        { href: "/app/vendor/scans", label: "Scan log" },
       ];
   }
 }

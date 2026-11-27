@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import { FileText, History, Inbox, Lock, Plus, ShieldCheck, UserCheck } from "lucide-react";
-import { ButtonLink } from "@/components/Button";
+import { FileText, History, Lock, ShieldCheck, UserCheck } from "lucide-react";
 import { getAdminStatus, requireSide, requireViewer } from "@/lib/auth";
 import { lockAdmin } from "./verify/actions";
 import { reviewApplication } from "../actions";
 import { Card, Empty, PageTitle } from "../ui";
 
-export const metadata: Metadata = { title: "Admin" };
+export const metadata: Metadata = { title: "Doctor verification" };
 
 const auditLabel: Record<string, string> = {
   admin_verified: "Admin signed in (email + authenticator)",
@@ -26,13 +25,18 @@ export default async function AdminPage() {
   await requireSide("admin");
   const { supabase } = await requireViewer(["admin"]);
   const status = await getAdminStatus();
-  const [{ data: apps }, { data: leads }, { data: audit }] = await Promise.all([
+  const [{ data: apps }, { data: reviewed }, { data: audit }] = await Promise.all([
     supabase
       .from("doctor_applications")
       .select("id, full_name, registration_no, council, qualification, document_path, created_at")
       .eq("status", "pending")
       .order("created_at"),
-    supabase.from("leads").select("id, name, email, phone, organisation, type, message, created_at").order("created_at", { ascending: false }).limit(25),
+    supabase
+      .from("doctor_applications")
+      .select("id, full_name, registration_no, council, qualification, status, reviewed_at")
+      .neq("status", "pending")
+      .order("reviewed_at", { ascending: false, nullsFirst: false })
+      .limit(20),
     supabase.from("admin_audit").select("id, action, target, created_at").order("id", { ascending: false }).limit(20),
   ]);
   const verified = Boolean(status?.verified);
@@ -50,11 +54,7 @@ export default async function AdminPage() {
 
   return (
     <>
-      <PageTitle
-        title="Admin"
-        subtitle="Verify doctors, register devices and follow up on enquiries."
-        action={<ButtonLink href="/app/vendor/new" variant="secondary"><Plus className="h-4 w-4" /> Register device</ButtonLink>}
-      />
+      <PageTitle title="Doctor verification" subtitle="Check each doctor's registration before they can prescribe." />
 
       {verified && (
         <div className="-mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 ring-1 ring-emerald-200">
@@ -100,26 +100,26 @@ export default async function AdminPage() {
         </div>
       )}
 
-      <h2 className="mb-4 mt-12 text-lg font-bold text-ink">Latest enquiries</h2>
-      {!leads?.length ? (
-        <Empty icon={<Inbox className="h-6 w-6" />} title="No enquiries yet" body="Messages from the contact form land here." />
+      <h2 className="mb-4 mt-12 text-lg font-bold text-ink">Recently reviewed</h2>
+      {!reviewed?.length ? (
+        <p className="text-sm text-muted">No decisions yet.</p>
       ) : (
         <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[560px] text-left text-sm">
             <thead className="border-b border-line bg-surface text-xs uppercase tracking-wider text-muted">
-              <tr><th className="px-5 py-3">From</th><th className="px-5 py-3">Type</th><th className="px-5 py-3">Message</th><th className="px-5 py-3">Date</th></tr>
+              <tr><th className="px-5 py-3">Doctor</th><th className="px-5 py-3">Registration</th><th className="px-5 py-3">Decision</th><th className="px-5 py-3">Date</th></tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {leads.map((l) => (
-                <tr key={l.id} className="align-top">
+              {reviewed.map((r) => (
+                <tr key={r.id}>
+                  <td className="px-5 py-3 font-semibold text-ink">{r.full_name}<span className="block text-xs font-normal text-muted">{r.qualification}</span></td>
+                  <td className="px-5 py-3 text-ink">{r.registration_no}<span className="block text-xs text-muted">{r.council}</span></td>
                   <td className="px-5 py-3">
-                    <p className="font-semibold text-ink">{l.name}</p>
-                    <a href={`mailto:${l.email}`} className="text-xs text-brand-600">{l.email}</a>
-                    {l.organisation && <p className="text-xs text-muted">{l.organisation}</p>}
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${r.status === "approved" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-red-50 text-red-700 ring-red-200"}`}>
+                      {r.status === "approved" ? "Approved" : "Rejected"}
+                    </span>
                   </td>
-                  <td className="px-5 py-3 capitalize text-ink">{l.type}</td>
-                  <td className="max-w-md px-5 py-3 text-muted">{l.message}</td>
-                  <td className="whitespace-nowrap px-5 py-3 text-xs text-muted">{new Date(l.created_at).toLocaleDateString("en-IN")}</td>
+                  <td className="whitespace-nowrap px-5 py-3 text-xs text-muted">{r.reviewed_at ? new Date(r.reviewed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}</td>
                 </tr>
               ))}
             </tbody>

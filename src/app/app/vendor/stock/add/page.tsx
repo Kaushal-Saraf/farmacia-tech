@@ -9,7 +9,7 @@ import { AddStockForm } from "./AddStockForm";
 export const metadata: Metadata = { title: "Add stock" };
 
 export default async function AddStockPage({ searchParams }: PageProps<"/app/vendor/stock/add">) {
-  const { side } = await requireSide("vendor", "admin");
+  const { side } = await requireSide("vendor");
   const { supabase, profile } = await requireViewer(["vendor", "admin"]);
   const { device } = await searchParams;
 

@@ -31,14 +31,11 @@ export default async function PortalLayout({ children }: LayoutProps<"/app">) {
 
   // Badges on the operator tabs: scans waiting for review, and expired/recalled stock still on a device.
   const counts = { review: 0, alerts: 0 };
-  if ((side === "vendor" && isVendor) || side === "admin") {
-    let reviewQ = supabase.from("scan_events").select("id", { count: "exact", head: true }).eq("review_status", "open");
-    let alertsQ = supabase.from("stock_status").select("id", { count: "exact", head: true }).in("lock_reason", ["expired", "recalled"]).gt("quantity", 0);
-    if (side !== "admin") {
-      reviewQ = reviewQ.eq("vendor_id", profile.id);
-      alertsQ = alertsQ.eq("vendor_id", profile.id);
-    }
-    const [review, alerts] = await Promise.all([reviewQ, alertsQ]);
+  if (side === "vendor" && isVendor) {
+    const [review, alerts] = await Promise.all([
+      supabase.from("scan_events").select("id", { count: "exact", head: true }).eq("review_status", "open").eq("vendor_id", profile.id),
+      supabase.from("stock_status").select("id", { count: "exact", head: true }).in("lock_reason", ["expired", "recalled"]).gt("quantity", 0).eq("vendor_id", profile.id),
+    ]);
     counts.review = review.count ?? 0;
     counts.alerts = alerts.count ?? 0;
   }

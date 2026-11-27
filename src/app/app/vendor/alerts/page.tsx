@@ -47,7 +47,7 @@ function Rows({ rows, extra }: { rows: StockRow[]; extra?: (r: StockRow) => Reac
 }
 
 export default async function AlertsPage() {
-  const { supabase, profile, side } = await requireSide("vendor", "admin");
+  const { supabase, profile, side } = await requireSide("vendor");
   let q = supabase.from("stock_status").select("*").order("exp", { ascending: true, nullsFirst: false });
   let mq = supabase
     .from("stock_movements")

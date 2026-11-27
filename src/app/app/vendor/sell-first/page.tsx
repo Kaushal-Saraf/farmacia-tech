@@ -12,7 +12,7 @@ const where = (r: StockRow) => (r.slot_no ? `Slot ${r.slot_no}` : r.shelf ? `She
 
 /** For each medicine, the batch to sell first: earliest expiry first (FEFO). */
 export default async function SellFirstPage({ searchParams }: PageProps<"/app/vendor/sell-first">) {
-  const { supabase, profile, side } = await requireSide("vendor", "admin");
+  const { supabase, profile, side } = await requireSide("vendor");
   const { device } = await searchParams;
   let dq = supabase.from("machines").select("id, code, name").order("name");
   if (side !== "admin") dq = dq.eq("owner_id", profile.id);

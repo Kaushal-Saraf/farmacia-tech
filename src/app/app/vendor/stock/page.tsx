@@ -53,7 +53,7 @@ function Badges({ r }: { r: StockRow }) {
 }
 
 export default async function StockPage({ searchParams }: PageProps<"/app/vendor/stock">) {
-  const { side } = await requireSide("vendor", "admin");
+  const { side } = await requireSide("vendor");
   const { supabase, profile } = await requireViewer(["vendor", "admin"]);
   const { device, empty, added } = await searchParams;
 
