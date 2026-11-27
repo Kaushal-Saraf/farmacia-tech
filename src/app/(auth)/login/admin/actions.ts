@@ -35,7 +35,7 @@ export async function verifyAdminCode(_prev: AdminAuthState, formData: FormData)
   const { data: profile } = await supabase.from("profiles").select("roles").eq("id", data.user.id).maybeSingle();
   if (!(profile?.roles as string[] | undefined)?.includes("admin")) {
     await supabase.auth.signOut();
-    return { error: "This email isn't an admin account." };
+    return { error: "This email isn't set up as admin yet. In Supabase, run supabase/roles.sql again (after creating this user), then try again." };
   }
   (await cookies()).set(SIDE_COOKIE, "admin", SIDE_COOKIE_OPTIONS);
   redirect("/app/admin/verify");

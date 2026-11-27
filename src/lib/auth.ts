@@ -47,6 +47,8 @@ export const isDoctorApplicant = cache(async () => {
  */
 export const getSide = cache(async (): Promise<Side> => {
   const viewer = await getViewer();
+  // The admin account (an email, never a mobile number) only ever uses the admin side.
+  if (viewer && hasRole(viewer.profile, "admin")) return "admin";
   const saved = (await cookies()).get(SIDE_COOKIE)?.value;
   if (isSide(saved) && (saved !== "admin" || (viewer && hasRole(viewer.profile, "admin")))) return saved;
   return viewer ? viewer.profile.role : "patient";
@@ -57,6 +59,7 @@ export async function availableSides(): Promise<Side[]> {
   const viewer = await getViewer();
   if (!viewer) return [];
   const p = viewer.profile;
+  if (hasRole(p, "admin")) return ["admin"];
   const out: Side[] = ["patient"];
   if (hasRole(p, "doctor") || (await isDoctorApplicant())) out.push("doctor");
   if (hasRole(p, "vendor")) out.push("vendor");

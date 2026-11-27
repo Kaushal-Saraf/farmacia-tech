@@ -64,7 +64,9 @@ async function portalHome(supabase: SupabaseClient, userId: string, side: string
   if (error?.code === "42703") ({ data, error } = await supabase.from("profiles").select("role, full_name").eq("id", userId).maybeSingle<Row>());
   if (error || !data) return null;
   const roles = data.roles ?? ["patient", data.role];
-  const current: Side = isSide(side) && (side !== "admin" || roles.includes("admin")) ? side : data.role;
+  const current: Side = roles.includes("admin")
+    ? "admin" // the admin account only ever uses the admin side
+    : isSide(side) && side !== "admin" ? side : data.role;
   if (current === "patient" && !data.full_name) return "/app/welcome";
   return sideHome[current];
 }
