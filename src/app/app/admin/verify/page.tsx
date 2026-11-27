@@ -14,9 +14,26 @@ export default async function AdminVerifyPage() {
   const status = await getAdminStatus();
   if (status?.verified) redirect("/app/admin");
 
-  const { data: factors } = await supabase.auth.mfa.listFactors();
+  const [{ data: factors }, { data: aal }] = await Promise.all([
+    supabase.auth.mfa.listFactors(),
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+  ]);
   const totp = factors?.totp?.[0];
   const steps = ["Email code", "Authenticator app"];
+
+  // The app code was accepted (session at aal2) but the database still says "not verified":
+  // show both sides so the cause is visible instead of silently asking for the code again.
+  const accepted = aal?.currentLevel === "aal2";
+  const totpAt = (aal?.currentAuthenticationMethods ?? [])
+    .map((m) => (typeof m === "string" ? { method: m, timestamp: 0 } : m))
+    .find((m) => m.method === "totp")?.timestamp;
+  const reason = !accepted
+    ? null
+    : status?.aal !== "aal2"
+      ? "The database is not receiving your signed-in session. This happens when the website uses the Supabase secret key: in Vercel set NEXT_PUBLIC_SUPABASE_ANON_KEY to the publishable key (sb_publishable_…) and redeploy."
+      : !status?.has_role
+        ? "This account doesn't have the admin role in the database. Run modules/1-accounts/database.sql again."
+        : "The database didn't accept the authenticator check. Enter a fresh code below.";
 
   return (
     <div className="mx-auto max-w-md">
@@ -36,6 +53,16 @@ export default async function AdminVerifyPage() {
             </li>
           ))}
         </ol>
+        {reason && (
+          <div className="mt-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
+            <p className="font-semibold">Your app code was accepted, but admin didn&apos;t open.</p>
+            <p className="mt-1">{reason}</p>
+            <p className="mt-2 font-mono text-xs text-amber-800">
+              session: {aal?.currentLevel ?? "?"}{totpAt ? ` (app code at ${new Date(totpAt * 1000).toLocaleTimeString("en-IN")})` : ""} ·
+              database: role {status?.has_role ? "admin" : "not admin"}, sees {status?.aal ?? "no session"}
+            </p>
+          </div>
+        )}
         <div className="mt-6">{totp ? <CodeStep factorId={totp.id} /> : <EnrollStep />}</div>
       </Card>
       <p className="mt-4 text-center text-xs text-muted">
