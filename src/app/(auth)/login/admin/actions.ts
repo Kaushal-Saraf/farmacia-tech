@@ -15,11 +15,19 @@ export async function sendAdminCode(_prev: AdminAuthState, formData: FormData): 
   if (!EMAIL.test(email)) return { error: "Enter the admin email address." };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
-  // Shows in Vercel → Logs, so a failed send (SMTP, rate limit, missing user) can be diagnosed.
-  if (error) console.error("[admin sign-in] send code failed:", error.status, error.code ?? "", error.message);
-  // Too many requests is worth saying; anything else (e.g. unknown email) gets the same next screen,
-  // so the page doesn't reveal which emails are admin accounts.
-  if (error?.status === 429) return { error: "Too many codes requested. Wait a few minutes and try again." };
+  if (error) {
+    // Also in Vercel → Logs. There is only one admin email, so saying exactly what failed helps more than it reveals.
+    console.error("[admin sign-in] send code failed:", error.status, error.code ?? "", error.message);
+    if (error.status === 429 || /security purposes|rate limit/i.test(error.message)) {
+      return { error: "Too many codes requested. Wait a minute and try again." };
+    }
+    if (error.code === "otp_disabled" || /signups not allowed|user not found/i.test(error.message)) {
+      return { error: "No account with this email. Create it in Supabase → Authentication → Users → Add user (tick Auto Confirm User)." };
+    }
+    return {
+      error: `The email could not be sent. Supabase says: "${error.message}". Check Supabase → Authentication → Emails → SMTP Settings.`,
+    };
+  }
   redirect(`/login/admin/verify?email=${encodeURIComponent(email)}`);
 }
 
