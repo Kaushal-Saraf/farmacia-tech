@@ -15,6 +15,8 @@ export async function sendAdminCode(_prev: AdminAuthState, formData: FormData): 
   if (!EMAIL.test(email)) return { error: "Enter the admin email address." };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+  // Shows in Vercel → Logs, so a failed send (SMTP, rate limit, missing user) can be diagnosed.
+  if (error) console.error("[admin sign-in] send code failed:", error.status, error.code ?? "", error.message);
   // Too many requests is worth saying; anything else (e.g. unknown email) gets the same next screen,
   // so the page doesn't reveal which emails are admin accounts.
   if (error?.status === 429) return { error: "Too many codes requested. Wait a few minutes and try again." };
@@ -30,10 +32,14 @@ export async function verifyAdminCode(_prev: AdminAuthState, formData: FormData)
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
-  if (error || !data.user) return { error: "That code is wrong or has expired." };
+  if (error || !data.user) {
+    console.error("[admin sign-in] code check failed:", error?.status, error?.code ?? "", error?.message);
+    return { error: "That code is wrong or has expired." };
+  }
 
   const { data: profile } = await supabase.from("profiles").select("roles").eq("id", data.user.id).maybeSingle();
   if (!(profile?.roles as string[] | undefined)?.includes("admin")) {
+    console.error("[admin sign-in] signed in but not admin (re-run supabase/roles.sql?)");
     await supabase.auth.signOut();
     return { error: "This email isn't set up as admin yet. In Supabase, run supabase/roles.sql again (after creating this user), then try again." };
   }

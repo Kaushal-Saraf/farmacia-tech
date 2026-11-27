@@ -21,7 +21,10 @@ export async function startEnroll(): Promise<EnrollState> {
     friendlyName: `Farmacia Tech admin ${new Date().toISOString().slice(0, 16)}`,
     issuer: "Farmacia Tech",
   });
-  if (error || !data) return { error: "Couldn't start the setup. Check that TOTP multi-factor is enabled in Supabase." };
+  if (error || !data) {
+    console.error("[admin sign-in] authenticator setup failed:", error?.status, error?.code ?? "", error?.message);
+    return { error: "Couldn't start the setup. Check that TOTP multi-factor is enabled in Supabase." };
+  }
   return { factorId: data.id, qr: data.totp.qr_code, secret: data.totp.secret };
 }
 
@@ -33,7 +36,10 @@ export async function verifyCode(_prev: VerifyState, formData: FormData): Promis
   if (!factorId) return { error: "Start again." };
   if (code.length !== 6) return { error: "Enter the 6-digit code from your authenticator app." };
   const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code });
-  if (error) return { error: "That code is wrong or has expired. Codes change every 30 seconds." };
+  if (error) {
+    console.error("[admin sign-in] authenticator code failed:", error.status, error.code ?? "", error.message);
+    return { error: "That code is wrong or has expired. Codes change every 30 seconds." };
+  }
   await supabase.rpc("admin_note_verified");
   redirect("/app/admin");
 }
