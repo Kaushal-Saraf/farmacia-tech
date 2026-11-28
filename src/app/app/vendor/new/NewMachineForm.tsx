@@ -22,7 +22,8 @@ export function NewMachineForm() {
     const c = state.created;
     return (
       <div className="space-y-6">
-        <p className="font-bold text-ink">Registered. Hand the Device ID and pairing code to the operator.</p>
+        <p className="font-bold text-ink">Registered. Load the config file onto the device.</p>
+        <p className="text-sm text-muted">The operator then links it from their account using the Device ID and the pairing code the device shows on its screen.</p>
         <Credentials code={c.code} pairingCode={c.pairingCode} deviceKey={c.deviceKey} baseUrl={c.baseUrl} />
         <div className="flex flex-wrap gap-3">
           <Link href={`/app/vendor/${c.machineId}`} className="inline-flex items-center rounded-xl bg-brand-500 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-600">

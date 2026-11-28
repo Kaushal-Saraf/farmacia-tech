@@ -8,7 +8,7 @@ Admin has three jobs:
 |---|---|---|
 | **Doctors** | approve or reject doctor applications | module 4 |
 | **Enquiries** | read Contact-page messages | this module (`leads`) |
-| **Devices** | register devices and manage them (new pairing code, new key, deactivate) | module 5 |
+| **Devices** | register devices and manage them (replace key, pairing code for a no-screen device, deactivate) | module 5 |
 
 Every admin sign-in and action is written to the **admin activity** log, shown on the Doctors page.
 

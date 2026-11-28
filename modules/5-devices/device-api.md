@@ -2,9 +2,12 @@
 
 This is the contract between the website and the device software. Both sides follow it exactly; change it here first.
 
-**Version 1.2 (26 Nov 2026).** Implemented in `modules/5-devices/database.sql` (the `device_*` functions) and `src/app/api/device/`.
+**Version 1.3 (28 Nov 2026).** Implemented in `modules/5-devices/database.sql` (the `device_*` functions) and `src/app/api/device/`.
 Reference device client (Python, standard library only): [`hardware/ft_device_client.py`](hardware/ft_device_client.py).
 Server test without hardware: `node modules/5-devices/fake-checker.mjs --url <base URL> --key ftk_…`.
+
+Changes in 1.3:
+- `POST /api/device/pairing-code`: the device asks for a pairing code and shows it on its own screen with its Device ID. The operator types both on the website to link the device. Valid 10 minutes, works once. Registration no longer hands out a pairing code.
 
 Changes in 1.2:
 - `GET /api/device/health` (no key) to check the network and the server clock.
@@ -29,6 +32,7 @@ Changes in 1.1:
 | GET | `/api/device/ping` | yes | Heartbeat, `snapshotVersion` | every `pollSeconds` (60) |
 | GET | `/api/device/snapshot` | yes | Full offline copy | at startup and when `snapshotVersion` changes |
 | POST | `/api/device/events` | yes | Upload scans (≤100 per request) | whenever the queue has pending scans |
+| POST | `/api/device/pairing-code` | yes | A code to show on screen so an operator can link the device | when someone presses **Pair** |
 
 All responses are JSON with `Cache-Control: no-store`. Always use HTTPS on the live site.
 
@@ -54,7 +58,7 @@ Each device is registered on the website (Admin → Register device) and gets:
 |---|---|---|
 | Device ID | `FT-MC-4HT8PW` | Printed on the device. `FT-MC-` = Medicine Checker, `FT-VM-` = vending machine. |
 | Device key | `ftk_…` | Secret. Stored on the device only; the website keeps a SHA-256 hash. |
-| Pairing code | `K7QM-3XHP` | Given to the operator to link the device to their account. Not used by the device. |
+| Pairing code | `K7QM-3XHP` | Shown on the device's screen when someone presses **Pair** (see 3c). The operator types it on the website with the Device ID. Valid 10 minutes, works once. |
 
 Every request sends the key in this header:
 
@@ -121,7 +125,22 @@ Everything the device needs to work offline.
 
 ## 3b. `GET /api/device/health`
 
-No key. `{ "ok": true, "api": "1.2", "serverTime": "2026-11-26T10:12:31Z" }`
+No key. `{ "ok": true, "api": "1.3", "serverTime": "2026-11-26T10:12:31Z" }`
+
+## 3c. `POST /api/device/pairing-code`
+
+Key required, no body. Call it when someone presses **Pair** on the device.
+
+```json
+{ "deviceId": "FT-MC-4HT8PW", "pairingCode": "K7QM-3XHP",
+  "expiresAt": "2026-11-28T10:22:31Z", "linked": false }
+```
+
+Show `deviceId` and `pairingCode` on the screen until `expiresAt` (10 minutes). The operator signs in on the website, opens **My devices → Link a device**, and types both. The code works once; each request replaces the previous code.
+
+`linked: true` means the device already belongs to an operator. A new code lets another operator take it over (for example, a device that is sold or moved), so the device should ask "Already linked. Show a code anyway?" before showing it.
+
+Only the device (with its key) can get a code this way, so a stolen Device ID alone is not enough to take a device. For a device without a screen, admin can issue a code from the device page on the website; that code works once and does not expire.
 
 ## 4. `POST /api/device/events`
 
@@ -234,4 +253,4 @@ Goes to the owner's reject bin.
 - Save the snapshot to disk and fetch it at startup, every 15 minutes, and after each successful upload. Use `serverTime` to correct clock drift.
 - Queue every scan in local storage before showing the result. Upload oldest-first, up to 100 at a time.
 - Retry network errors and 5xx with backoff. On 401, stop and show "Device key rejected".
-- Never log the device key.
+- Never log the device key. The pairing code may be shown on screen but should not be written to logs either.

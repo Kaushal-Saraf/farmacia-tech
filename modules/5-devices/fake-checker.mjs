@@ -3,9 +3,11 @@
  * Pretends to be a Medicine Checker, so the website can be tested before the real device is ready.
  *
  *   node modules/5-devices/fake-checker.mjs --url http://localhost:3000 --key ftk_xxxxxxxx
+ *   node modules/5-devices/fake-checker.mjs --url http://localhost:3000 --key ftk_xxxxxxxx --pair
  *
- * Get the key by registering a Medicine Checker on the website (Admin → Register device), then link it
- * to an operator account. For a useful run, add at least one medicine first (operator → Stock → Add stock).
+ * Get the key by registering a Medicine Checker on the website (Admin → Register device). With --pair it only
+ * does what the device's Pair button does: prints the Device ID and a pairing code to link it to an operator
+ * account. For a useful run, add at least one medicine first (operator → Stock → Add stock).
  *
  * It downloads the snapshot, then sends one scan event of each kind (see modules/5-devices/device-api.md), resends one
  * (must come back "duplicate") and sends one with the wrong device ID (must be "rejected"). Then it prints
@@ -43,6 +45,20 @@ const ym = (d) => d.toISOString().slice(0, 7);
 const now = new Date();
 const nowIso = () => new Date().toISOString();
 const field = (value, status) => ({ value: status === "not_found" ? "" : value, status });
+
+// ---------- Pair button: print a pairing code, then stop ----------
+if ("pair" in args) {
+  console.log(`\n→ POST ${BASE}/api/device/pairing-code`);
+  const p = await call("/api/device/pairing-code", { method: "POST" });
+  if (p.status !== 200) {
+    console.error(`  HTTP ${p.status}:`, p.body, p.status === 401 ? "\n  The key was rejected. Check it, and that the device is active." : "");
+    process.exit(1);
+  }
+  if (p.body.linked) console.log("  Note: already linked. This code lets another operator take the device over.");
+  console.log(`  Device ID     ${p.body.deviceId}\n  Pairing code  ${p.body.pairingCode}   (valid until ${new Date(p.body.expiresAt).toLocaleTimeString()}, works once)`);
+  console.log("  On the website, as the operator: My devices → Link a device, then type both.");
+  process.exit(0);
+}
 
 // ---------- 1. Snapshot ----------
 console.log(`\n→ GET ${BASE}/api/device/snapshot`);

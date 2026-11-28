@@ -17,7 +17,7 @@ export default async function NewMachinePage() {
       </Link>
       <PageTitle
         title="Register a device"
-        subtitle="Creates its Device ID, a one-time pairing code for the operator, and the key the device uses to connect."
+        subtitle="Creates its Device ID and the key the device uses to connect. The operator links it later with the code the device shows."
       />
       <Card><NewMachineForm /></Card>
     </div>

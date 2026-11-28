@@ -8,7 +8,7 @@ import { Credentials } from "../Credentials";
 const btn =
   "inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-brand-700 ring-1 ring-inset ring-brand-200 hover:bg-brand-50 disabled:opacity-60";
 
-/** Admin only: issue a new pairing code (e.g. to hand the device to a new operator) or a new device key. */
+/** Admin only: a pairing code for a device without a screen (devices with a screen show their own), or a new device key. */
 export function SecretsPanel({ machineId, linked }: { machineId: string; linked: boolean }) {
   const [state, action, pending] = useActionState<CredentialState, FormData>(resetDeviceSecret, {});
   return (
@@ -21,10 +21,10 @@ export function SecretsPanel({ machineId, linked }: { machineId: string; linked:
           disabled={pending}
           className={btn}
           onClick={(e) => {
-            if (linked && !confirm("A new pairing code lets another operator take over this device. Continue?")) e.preventDefault();
+            if (linked && !confirm("This code lets another operator take over this device. Continue?")) e.preventDefault();
           }}
         >
-          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} New pairing code
+          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} Pairing code (no-screen device)
         </button>
         <button
           name="which"
@@ -35,7 +35,7 @@ export function SecretsPanel({ machineId, linked }: { machineId: string; linked:
             if (!confirm("The device stops connecting until the new key is loaded into it. Continue?")) e.preventDefault();
           }}
         >
-          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />} New device key
+          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />} Replace device key
         </button>
       </form>
       {state.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}

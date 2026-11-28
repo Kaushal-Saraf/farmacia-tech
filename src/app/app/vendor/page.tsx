@@ -29,7 +29,7 @@ export default async function DevicesPage() {
   if (!isAdmin && !hasRole(profile, "vendor")) {
     return (
       <div className="mx-auto max-w-2xl">
-        <PageTitle title="Link your first device" subtitle="Add the vending machine or Medicine Checker you received from Farmacia Tech." />
+        <PageTitle title="Link your first device" subtitle="Add your vending machine or Medicine Checker: open Pair on the device and type what its screen shows." />
         <Card><LinkDeviceForm /></Card>
       </div>
     );
@@ -75,7 +75,7 @@ export default async function DevicesPage() {
         <Empty
           icon={<Server className="h-6 w-6" />}
           title="No devices yet"
-          body={isAdmin ? "Register a device to get its Device ID and pairing code." : "Click Link a device and enter the Device ID and pairing code from Farmacia Tech."}
+          body={isAdmin ? "Register a device to get its Device ID and device key." : "Click Link a device and enter the Device ID and pairing code shown on the device's screen."}
         />
       ) : (
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">

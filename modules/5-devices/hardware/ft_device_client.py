@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Farmacia Tech device client: reference implementation of modules/5-devices/device-api.md (version 1.2).
+Farmacia Tech device client: reference implementation of modules/5-devices/device-api.md (version 1.3).
 
 Standard library only (Python 3.9+, e.g. Raspberry Pi OS). Drop this file into the device software and use
 `DeviceClient`, or run it from the command line to test the connection:
@@ -8,6 +8,7 @@ Standard library only (Python 3.9+, e.g. Raspberry Pi OS). Drop this file into t
     python3 ft_device_client.py --config config.json health      # network + server clock (no key needed)
     python3 ft_device_client.py --config config.json ping        # key check + snapshot version
     python3 ft_device_client.py --config config.json snapshot    # download and save the offline copy
+    python3 ft_device_client.py --config config.json pair        # pairing code for the operator (show it on screen)
     python3 ft_device_client.py --config config.json selftest    # send one harmless scan (goes to the reject bin)
     python3 ft_device_client.py --config config.json status      # queue: pending / failed uploads
     python3 ft_device_client.py --config config.json run         # sync loop: ping, snapshot when changed, upload
@@ -199,6 +200,17 @@ class DeviceClient:
         self._note_server_time(body.get("serverTime"))
         self.device_id = body.get("deviceId") or self.device_id
         self.poll_seconds = int(body.get("pollSeconds") or 60)
+        return body
+
+    def request_pairing_code(self) -> dict:
+        """For the device's Pair button: returns deviceId, pairingCode, expiresAt (10 min) and linked.
+        Show deviceId and pairingCode on the screen; the operator types both on the website. Don't log the code."""
+        status, body = self._request("POST", "/api/device/pairing-code")
+        if status == 401:
+            raise KeyRejected("Device key rejected - contact Farmacia Tech")
+        if status != 200:
+            raise NetworkError(f"HTTP {status}: {body}")
+        self.device_id = body.get("deviceId") or self.device_id
         return body
 
     def fetch_snapshot(self) -> dict:
@@ -397,8 +409,8 @@ def _load_config(args) -> tuple[str, str]:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Farmacia Tech device client (modules/5-devices/device-api.md v1.2)")
-    ap.add_argument("command", choices=["health", "ping", "snapshot", "selftest", "upload", "status", "run"])
+    ap = argparse.ArgumentParser(description="Farmacia Tech device client (modules/5-devices/device-api.md v1.3)")
+    ap.add_argument("command", choices=["health", "ping", "snapshot", "pair", "selftest", "upload", "status", "run"])
     ap.add_argument("--config", default="config.json")
     ap.add_argument("--url")
     ap.add_argument("--key")
@@ -419,6 +431,13 @@ def main() -> None:
             s = c.fetch_snapshot()
             print(f"Saved {args.data}/snapshot.json · device {s['device']['deviceId']} · version {s.get('snapshotVersion')} · "
                   f"{len(s['products'])} medicines · {len(s['batches'])} confirmed batches · {len(s['recalls'])} recalls · {len(s['stock'])} stock rows")
+        elif args.command == "pair":
+            p = c.request_pairing_code()
+            until = dt.datetime.fromisoformat(p["expiresAt"].replace("Z", "+00:00")).astimezone().strftime("%H:%M")
+            if p.get("linked"):
+                print("Note: this device is already linked. This code lets another operator take it over.")
+            print(f"Device ID     {p['deviceId']}\nPairing code  {p['pairingCode']}   (valid until {until}, works once)")
+            print("On the website: My devices → Link a device, then type both.")
         elif args.command == "selftest":
             if not c.device_id:
                 c.ping()

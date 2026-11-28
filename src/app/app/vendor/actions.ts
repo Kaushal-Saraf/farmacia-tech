@@ -25,7 +25,10 @@ const num = (v: FormDataEntryValue | null) => {
 
 // ---------- Farmacia Tech (admin) -------------------------------------------
 
-/** Registers a device and returns its Device ID, pairing code and device key (shown once). */
+/**
+ * Registers a device and returns its Device ID and device key (shown once). No pairing code: the device
+ * shows its own on its screen. For a device without a screen, admin issues one from the device page.
+ */
 export async function registerDevice(_prev: CredentialState, formData: FormData): Promise<CredentialState> {
   const { supabase } = await requireViewer(["admin"]);
   const type = formData.get("type");
@@ -42,7 +45,6 @@ export async function registerDevice(_prev: CredentialState, formData: FormData)
   const name = String(formData.get("name") ?? "").trim() || deviceTypeLabel[type];
   if (name.length > 80) return { error: "Keep the name under 80 characters." };
 
-  const pairingCode = newPairingCode();
   const deviceKey = newDeviceKey();
 
   // A generated ID could (very rarely) collide, so try a few.
@@ -51,7 +53,7 @@ export async function registerDevice(_prev: CredentialState, formData: FormData)
     const code = custom || newDeviceCode(type);
     const { data, error } = await supabase
       .from("machines")
-      .insert({ code, name, type, device_key_hash: hashDeviceKey(deviceKey), pairing_code_hash: hashPairingCode(pairingCode) })
+      .insert({ code, name, type, device_key_hash: hashDeviceKey(deviceKey) })
       .select("id, code")
       .single();
     if (data) machine = data;
@@ -68,10 +70,10 @@ export async function registerDevice(_prev: CredentialState, formData: FormData)
   }
 
   revalidatePath("/app/vendor");
-  return { created: { machineId: machine.id, code: machine.code, type, pairingCode, deviceKey, baseUrl: site.url } };
+  return { created: { machineId: machine.id, code: machine.code, type, deviceKey, baseUrl: site.url } };
 }
 
-/** Issues a new pairing code (to hand a device to a new operator) or a new device key. */
+/** Issues a pairing code for a device without a screen, or a new device key. */
 export async function resetDeviceSecret(_prev: CredentialState, formData: FormData): Promise<CredentialState> {
   const { supabase } = await requireViewer(["admin"]);
   const machineId = String(formData.get("machine_id") ?? "");
@@ -102,7 +104,7 @@ export async function setMachineActive(formData: FormData) {
 
 // ---------- Operator --------------------------------------------------------
 
-/** Links a device to the signed-in operator using the Device ID and pairing code from Farmacia Tech. */
+/** Links a device to the signed-in operator using the Device ID and the pairing code shown on the device's screen. */
 export async function linkDevice(_prev: DeviceFormState, formData: FormData): Promise<DeviceFormState> {
   const { supabase } = await requireViewer();
   const code = String(formData.get("code") ?? "").trim();

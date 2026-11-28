@@ -5,9 +5,12 @@
 - **Medicine Checker:** a Raspberry Pi with a camera that reads the batch number, MFD, EXP and MRP on a strip.
 
 **How a device gets to an operator:**
-1. Admin registers it, which creates a **Device ID**, a one-time **pairing code** and a **device key**.
-2. The operator links it with the Device ID and pairing code.
-3. The device itself uses the key to call the device API.
+1. Admin registers it, which creates a **Device ID** and a **device key**. The key goes into the device's `config.json`.
+2. At the pharmacy, the operator presses **Pair** on the device. Its screen shows the Device ID and a **pairing code** (valid 10 minutes, works once).
+3. The operator types both on the website (**Link a device**). The device is now theirs.
+4. The device itself uses the key to call the device API.
+
+A device without a screen: admin presses **Pairing code (no-screen device)** on the device page and gives that code to the operator (works once, no time limit).
 
 **Shared by all operators:** the medicine list (products, batches, recalls).
 **Private to each operator:** their devices, stock, scans and stock log.
@@ -31,7 +34,8 @@
 
 | File | What it does |
 |---|---|
-| `src/app/app/vendor/actions.ts` | register a device, new key or pairing code, activate (admin); link and edit a device (operator) |
+| `src/app/app/vendor/actions.ts` | register a device, replace key, pairing code for a no-screen device, activate (admin); link and edit a device (operator) |
+| `src/app/api/device/pairing-code/route.ts` | the device's Pair button asks here for a code to show on its screen |
 | `src/app/app/vendor/stock/actions.ts`, `review/actions.ts`, `alerts/actions.ts` | stock edits, review decisions, "Removed" |
 | `src/lib/devices.ts` | make Device IDs, pairing codes and keys; hash them |
 | `src/lib/device-api.ts`, `device-api-version.ts` | shared code for the API routes |
@@ -58,7 +62,7 @@
   - linking: `claim_device`
   - admin key reset: `set_device_secrets`
   - stock edits: `vendor_*`
-  - device API: `device_snapshot`, `device_ping`, `device_ingest_events`
+  - device API: `device_snapshot`, `device_ping`, `device_ingest_events`, `device_set_pairing_code`
   - review: `vendor_review_*`
 
 ## Set up
@@ -68,11 +72,15 @@
 
 ## Test
 
-1. As admin, go to **Register device → Medicine Checker** and copy the Device ID, pairing code and `config.json`.
-2. As an operator (a test number), go to **Link a device** and enter the Device ID and pairing code. On the device page, press **Use my current location** (on your phone, next to the device), check the map link, then **Save**. Then add one medicine via **Stock → Add stock by hand**.
+1. As admin, go to **Register device → Medicine Checker** and copy the `config.json` (it has the Device ID and key).
+2. Press "Pair" without a device:
+   ```bash
+   node modules/5-devices/fake-checker.mjs --url https://farmacia-tech.vercel.app --key ftk_… --pair
+   ```
+   It prints the Device ID and a pairing code. As an operator (a test number), go to **Link a device** and enter both within 10 minutes. On the device page, press **Use my current location** (on your phone, next to the device), check the map link, then **Save**. Then add one medicine via **Stock → Add stock by hand**.
 3. Run the fake device:
    ```bash
    node modules/5-devices/fake-checker.mjs --url https://farmacia-tech.vercel.app --key ftk_…
    ```
    It should say **9/9 as expected**. Then check **Stock**, **Review** and **Scan log**.
-4. Quick API check: open `https://farmacia-tech.vercel.app/api/device/health`. It should show `{"ok":true,"api":"1.2",…}`.
+4. Quick API check: open `https://farmacia-tech.vercel.app/api/device/health`. It should show `{"ok":true,"api":"1.3",…}`.

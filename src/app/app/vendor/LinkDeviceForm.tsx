@@ -36,7 +36,8 @@ export function LinkDeviceForm() {
         />
       </label>
       <p className="text-xs text-muted sm:col-span-2">
-        Both are on the card Farmacia Tech gave you with the device. The pairing code works once.
+        On the device, open <strong>Pair</strong>: its screen shows the Device ID and a pairing code (valid 10 minutes, works once).
+        For a device without a screen, Farmacia Tech gives you the code.
       </p>
       {state.error && <p role="alert" className="text-sm text-red-600 sm:col-span-2">{state.error}</p>}
       <div className="sm:col-span-2">

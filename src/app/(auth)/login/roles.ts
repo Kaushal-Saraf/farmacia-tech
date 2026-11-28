@@ -21,7 +21,7 @@ export const loginRoles = {
     title: "Operator sign in",
     icon: Server,
     pitch: "Manage stock, expiry dates and scans on your vending machines and Medicine Checkers.",
-    intro: "Sign in with your mobile number, then link your device with the Device ID and pairing code from Farmacia Tech.",
+    intro: "Sign in with your mobile number, then link your device with the Device ID and pairing code shown on its screen.",
   },
   admin: {
     label: "Admin",

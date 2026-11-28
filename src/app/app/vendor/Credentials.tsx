@@ -31,9 +31,9 @@ export function Credentials({ code, pairingCode, deviceKey, baseUrl }: { code: s
         <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
         Copy these now. For safety they are not stored and can&apos;t be shown again. You can issue new ones from the device page.
       </p>
-      <CopyRow label="Device ID" value={code} hint="Printed on the device. The operator needs it to link the device." />
+      <CopyRow label="Device ID" value={code} hint="Printed on the device, and shown on its screen when it pairs." />
       {pairingCode && (
-        <CopyRow label="Pairing code" value={pairingCode} hint="Give this to the operator with the Device ID. It works once." />
+        <CopyRow label="Pairing code" value={pairingCode} hint="For a device without a screen: give this to the operator with the Device ID. It works once." />
       )}
       {deviceKey && (
         <CopyRow label="Device key" value={deviceKey} hint="Load this into the device software. Never give it to anyone else." />

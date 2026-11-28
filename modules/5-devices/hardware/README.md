@@ -1,6 +1,6 @@
 # Device software helpers
 
-`ft_device_client.py` is a reference client for the device API ([`../device-api.md`](../device-api.md), v1.2). Python 3.9+, standard library only, so it runs on a stock Raspberry Pi OS.
+`ft_device_client.py` is a reference client for the device API ([`../device-api.md`](../device-api.md), v1.3). Python 3.9+, standard library only, so it runs on a stock Raspberry Pi OS.
 
 ## Set up a device
 
@@ -14,6 +14,24 @@
    python3 ft_device_client.py selftest
    ```
    `selftest` sends one harmless check/REFUSE scan: it only shows up in the operator's reject bin.
+4. Link it to the operator:
+   ```bash
+   python3 ft_device_client.py pair
+   ```
+   It prints the Device ID and a pairing code (valid 10 minutes, works once). The operator types both on the website: **My devices → Link a device**.
+
+## The Pair button (device app)
+
+The device needs a **Pair** menu item. When pressed:
+
+```python
+p = client.request_pairing_code()          # POST /api/device/pairing-code
+if p["linked"] and not ask("Already linked. Show a code anyway?"):
+    return
+show(p["deviceId"], p["pairingCode"])      # on the display, until p["expiresAt"] (10 minutes)
+```
+
+Pressing it again makes a new code and the old one stops working. Don't write the code to logs.
 
 ## Use it in the device app
 

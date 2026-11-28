@@ -64,7 +64,8 @@ create table if not exists public.machines (
   last_seen_at timestamptz,
   low_stock_at int not null default 2 check (low_stock_at between 0 and 1000),
   pairing_code_hash text,                                -- SHA-256; cleared once the operator has linked it
-  linked_at   timestamptz
+  linked_at   timestamptz,
+  pairing_code_expires_at timestamptz                    -- codes shown on the device screen last 10 minutes
 );
 alter table public.machines add column if not exists type public.device_type not null default 'vending';
 alter table public.machines add column if not exists device_key_hash text unique;
@@ -72,6 +73,7 @@ alter table public.machines add column if not exists last_seen_at timestamptz;
 alter table public.machines add column if not exists low_stock_at int not null default 2 check (low_stock_at between 0 and 1000);
 alter table public.machines add column if not exists pairing_code_hash text;
 alter table public.machines add column if not exists linked_at timestamptz;
+alter table public.machines add column if not exists pairing_code_expires_at timestamptz;
 
 -- Slot layout of a vending machine (stock itself is in public.stock).
 create table if not exists public.machine_slots (
@@ -442,9 +444,10 @@ create or replace function public.hash_pairing_code(p_code text)
 returns text language sql immutable set search_path = '' as $$
   select encode(sha256(convert_to(upper(regexp_replace(coalesce(p_code, ''), '[^A-Za-z0-9]', '', 'g')), 'UTF8')), 'hex')
 $$;
--- Operator links a device. The pairing code works once; a new one is issued only by Farmacia Tech
--- (that is also how a device moves to a new operator). Linking adds the operator (vendor) role to the
--- number; it keeps any other roles (a doctor can also run devices).
+-- Operator links a device with its Device ID and pairing code. The code works once. It comes from the
+-- device's own screen (valid 10 minutes, see device_set_pairing_code) or, for a device without a screen,
+-- from admin. Entering a new code also moves a device to a new operator. Linking adds the operator
+-- (vendor) role to the number; it keeps any other roles (a doctor can also run devices).
 create or replace function public.claim_device(p_code text, p_pairing_code text)
 returns uuid language plpgsql security definer set search_path = '' as $$
 declare
@@ -459,11 +462,12 @@ begin
    where code = upper(btrim(p_code))
      and pairing_code_hash is not null
      and pairing_code_hash = public.hash_pairing_code(p_pairing_code)
+     and (pairing_code_expires_at is null or pairing_code_expires_at > now())
    for update;
   if dev_id is null then raise exception 'Device ID or pairing code is not correct'; end if;
 
   update public.machines
-     set owner_id = me.id, pairing_code_hash = null, linked_at = now()
+     set owner_id = me.id, pairing_code_hash = null, pairing_code_expires_at = null, linked_at = now()
    where id = dev_id;
   update public.profiles set roles = roles || '{vendor}'::public.app_role[] where id = me.id;
   return dev_id;
@@ -477,11 +481,28 @@ begin
   if p_pairing_hash is not null and p_pairing_hash !~ '^[0-9a-f]{64}$' then raise exception 'bad pairing hash'; end if;
   update public.machines
      set device_key_hash   = coalesce(p_key_hash, device_key_hash),
-         pairing_code_hash = coalesce(p_pairing_hash, pairing_code_hash)
+         pairing_code_hash = coalesce(p_pairing_hash, pairing_code_hash),
+         -- an admin-issued code (device without a screen) doesn't expire
+         pairing_code_expires_at = case when p_pairing_hash is not null then null else pairing_code_expires_at end
    where id = p_machine_id;
   perform public.admin_log(
     case when p_key_hash is not null then 'device_key_reset' else 'pairing_code_reset' end,
     (select code from public.machines where id = p_machine_id));
+end $$;
+-- Device API: POST /api/device/pairing-code. The device asks for a pairing code to show on its own screen.
+-- The website makes the code and passes only its hash here. Valid 10 minutes; a new request replaces it.
+create or replace function public.device_set_pairing_code(p_key text, p_pairing_hash text)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare m public.machines%rowtype; till timestamptz := now() + interval '10 minutes';
+begin
+  select * into m from public.machines where id = public.device_by_key(p_key);
+  if m.id is null then return null; end if;
+  if p_pairing_hash is null or p_pairing_hash !~ '^[0-9a-f]{64}$' then raise exception 'bad pairing hash'; end if;
+  update public.machines
+     set pairing_code_hash = p_pairing_hash, pairing_code_expires_at = till, last_seen_at = now()
+   where id = m.id;
+  return jsonb_build_object('deviceId', m.code, 'expiresAt', to_char(till at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+                            'linked', m.owner_id is not null);
 end $$;
 create or replace function public.owns_device(p_machine_id uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
@@ -1162,7 +1183,7 @@ begin
     execute format('grant execute on function %s to authenticated', f);
   end loop;
   -- callable without signing in (each checks its own key or returns only public data)
-  foreach f in array array['public.device_snapshot(text)', 'public.device_ingest_events(text, jsonb)', 'public.device_ping(text)', 'public.public_machines()'] loop
+  foreach f in array array['public.device_snapshot(text)', 'public.device_ingest_events(text, jsonb)', 'public.device_ping(text)', 'public.device_set_pairing_code(text, text)', 'public.public_machines()'] loop
     execute format('revoke execute on function %s from public', f);
     execute format('grant execute on function %s to anon, authenticated', f);
   end loop;

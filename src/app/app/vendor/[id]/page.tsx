@@ -132,7 +132,7 @@ export default async function DevicePage({ params }: PageProps<"/app/vendor/[id]
               <p className="mt-1 text-sm text-muted">
                 {owner
                   ? `Linked to ${owner.full_name ?? "an operator"} (${owner.phone ?? "no phone"}).`
-                  : "Not linked to an operator yet. They link it with the Device ID and pairing code."}
+                  : "Not linked to an operator yet. They press Pair on the device and type the Device ID and code it shows."}
               </p>
             </div>
             <form action={setMachineActive}>
