@@ -20,7 +20,7 @@ export async function startEnroll(): Promise<EnrollState> {
   });
   if (error || !data) {
     console.error("[admin sign-in] authenticator setup failed:", error?.status, error?.code ?? "", error?.message);
-    return { error: "Couldn't start the setup. Check that TOTP multi-factor is enabled in Supabase." };
+    return { error: "Couldn't start the setup. Please try again. (ADM-MFA)" };
   }
   return { factorId: data.id, qr: data.totp.qr_code, secret: data.totp.secret };
 }

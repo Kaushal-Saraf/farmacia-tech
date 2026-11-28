@@ -24,16 +24,9 @@ export default async function AdminVerifyPage() {
   // The app code was accepted (session at aal2) but the database still says "not verified":
   // show both sides so the cause is visible instead of silently asking for the code again.
   const accepted = aal?.currentLevel === "aal2";
-  const totpAt = (aal?.currentAuthenticationMethods ?? [])
-    .map((m) => (typeof m === "string" ? { method: m, timestamp: 0 } : m))
-    .find((m) => m.method === "totp")?.timestamp;
-  const reason = !accepted
-    ? null
-    : status?.aal !== "aal2"
-      ? "The database is not receiving your signed-in session. This happens when the website uses the Supabase secret key: in Vercel set NEXT_PUBLIC_SUPABASE_ANON_KEY to the publishable key (sb_publishable_…) and redeploy."
-      : !status?.has_role
-        ? "This account doesn't have the admin role in the database. Run modules/1-accounts/database.sql again."
-        : "The database didn't accept the authenticator check. Enter a fresh code below.";
+  // A short code only; what each one means and how to fix it is in modules/2-admin/README.md → Troubleshooting.
+  const code = !accepted ? null : status?.aal !== "aal2" ? "ADM-SESSION" : !status?.has_role ? "ADM-ROLE" : "ADM-CHECK";
+  if (code) console.error(`[admin sign-in] app code accepted but admin not verified: ${code}`, { db_aal: status?.aal, has_role: status?.has_role });
 
   return (
     <div className="mx-auto max-w-md">
@@ -53,21 +46,13 @@ export default async function AdminVerifyPage() {
             </li>
           ))}
         </ol>
-        {reason && (
-          <div className="mt-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
-            <p className="font-semibold">Your app code was accepted, but admin didn&apos;t open.</p>
-            <p className="mt-1">{reason}</p>
-            <p className="mt-2 font-mono text-xs text-amber-800">
-              session: {aal?.currentLevel ?? "?"}{totpAt ? ` (app code at ${new Date(totpAt * 1000).toLocaleTimeString("en-IN")})` : ""} ·
-              database: role {status?.has_role ? "admin" : "not admin"}, sees {status?.aal ?? "no session"}
-            </p>
-          </div>
+        {code && (
+          <p role="alert" className="mt-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
+            Admin couldn&apos;t be opened. Enter a fresh code from the app. If this keeps happening, note the code: <span className="font-mono font-semibold">{code}</span>
+          </p>
         )}
         <div className="mt-6">{totp ? <CodeStep factorId={totp.id} /> : <EnrollStep />}</div>
       </Card>
-      <p className="mt-4 text-center text-xs text-muted">
-        Lost the phone with the authenticator app? In Supabase → Authentication → Users, open the admin user and remove its MFA factor, then set it up again here.
-      </p>
     </div>
   );
 }

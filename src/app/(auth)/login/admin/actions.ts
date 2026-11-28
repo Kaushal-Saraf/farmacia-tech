@@ -16,17 +16,16 @@ export async function sendAdminCode(_prev: AdminAuthState, formData: FormData): 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
   if (error) {
-    // Also in Vercel → Logs. There is only one admin email, so saying exactly what failed helps more than it reveals.
+    // Details go to Vercel → Logs only. The page shows a short message (and a code from
+    // modules/2-admin/README.md → Troubleshooting); setup steps are never shown on the site.
     console.error("[admin sign-in] send code failed:", error.status, error.code ?? "", error.message);
     if (error.status === 429 || /security purposes|rate limit/i.test(error.message)) {
       return { error: "Too many codes requested. Wait a minute and try again." };
     }
     if (error.code === "otp_disabled" || /signups not allowed|user not found/i.test(error.message)) {
-      return { error: "No account with this email. Create it in Supabase → Authentication → Users → Add user (tick Auto Confirm User)." };
+      return { error: "This email isn't an admin account." };
     }
-    return {
-      error: `The email could not be sent. Supabase says: "${error.message}". Check Supabase → Authentication → Emails → SMTP Settings.`,
-    };
+    return { error: "We couldn't send the code. Please try again in a few minutes. (ADM-EMAIL)" };
   }
   redirect(`/login/admin/verify?email=${encodeURIComponent(email)}`);
 }
@@ -49,7 +48,7 @@ export async function verifyAdminCode(_prev: AdminAuthState, formData: FormData)
   if (!(profile?.roles as string[] | undefined)?.includes("admin")) {
     console.error("[admin sign-in] signed in but not admin (re-run modules/1-accounts/database.sql?)");
     await supabase.auth.signOut();
-    return { error: "This email isn't set up as admin yet. In Supabase, run modules/1-accounts/database.sql again (after creating this user), then try again." };
+    return { error: "This email isn't an admin account. (ADM-ROLE)" };
   }
   (await cookies()).set(SIDE_COOKIE, "admin", SIDE_COOKIE_OPTIONS);
   redirect("/app/admin/verify");

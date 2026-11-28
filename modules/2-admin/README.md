@@ -60,6 +60,22 @@ Every admin sign-in and action is written to the **admin activity** log, shown o
 2. **Full sign-in:** `/login` → **Admin sign in** → email → code → authenticator (scan the QR code the first time). The **Doctors · Enquiries · Devices** tabs should appear.
 3. **Sign out (top bar), then sign in again.** Both codes should be asked again.
 
-**If something fails,** look in Vercel → **Logs** (search `admin sign-in`) and Supabase → **Authentication → Logs**.
+## Troubleshooting
 
-**Lost the phone with the authenticator app?** In Supabase → **Users** → admin user, remove its MFA factor, then set it up again.
+The sign-in pages only show a short message, sometimes with a code. What it means and how to fix it:
+
+| Message on the site | Code | Cause | Fix |
+|---|---|---|---|
+| This email isn't an admin account. | none | No Supabase user with this email (often a typo, e.g. `gamail.com`) | **Supabase → Authentication → Users → Add user → Create new user**, enter the email exactly, tick **Auto Confirm User**. Then run **module 1** again. |
+| This email isn't an admin account. | `ADM-ROLE` | The user exists but doesn't have the admin role | Make sure the email is in `admin_emails` (module 1 adds `medvendors01@gmail.com`), then run **module 1** again. Check with the query in step 2 above. |
+| We couldn't send the code. | `ADM-EMAIL` | Supabase couldn't send the email | Check **SMTP Settings** (step 3). The exact reason is in **Supabase → Logs → Auth**, e.g. `535 Username and Password not accepted` means a wrong app password. |
+| Too many codes requested. | none | One code per minute per email | Wait a minute and try again. |
+| That code is wrong or has expired. | none | Wrong or old code | **Email code:** use the newest email; codes work once. **App code:** turn on automatic date & time on the phone, and use the newest "Farmacia Tech" entry in the app. |
+| Couldn't start the setup. | `ADM-MFA` | Authenticator apps are turned off | **Authentication → Multi-Factor:** enable **TOTP**. |
+| Admin couldn't be opened. | `ADM-SESSION` | The database doesn't see the signed-in session, usually because the site uses the **secret** key | In Vercel set `NEXT_PUBLIC_SUPABASE_ANON_KEY` to the **publishable** key (`sb_publishable_…`) and redeploy. |
+| Admin couldn't be opened. | `ADM-ROLE` | The database doesn't give this account the admin role | Run **module 1** again. |
+| Admin couldn't be opened. | `ADM-CHECK` | The database has an older admin check | Run **module 1** and **module 2** again (from GitHub), then sign in again. |
+
+**More detail:** Vercel → **Logs** (search `admin sign-in`) and Supabase → **Authentication → Logs** show the full error.
+
+**Lost the phone with the authenticator app?** Supabase → **Authentication → Users** → the admin user → remove its **MFA factor**. Sign in again and set up the app afresh.
