@@ -3,10 +3,13 @@
 import { useActionState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/Button";
-import { verifyOtp, type AuthState } from "../actions";
+import { verifyOtp } from "../actions";
+import { SubmitFailure, submitSafely, type FormState } from "../submit-safely";
+
+const verify = submitSafely(verifyOtp);
 
 export function OtpForm({ phone, next, role }: { phone: string; next: string; role?: string }) {
-  const [state, action, pending] = useActionState<AuthState, FormData>(verifyOtp, {});
+  const [state, action, pending] = useActionState<FormState, FormData>(verify, {});
   return (
     <form action={action} className="space-y-5">
       <input type="hidden" name="phone" value={phone} />
@@ -27,6 +30,7 @@ export function OtpForm({ phone, next, role }: { phone: string; next: string; ro
         />
       </label>
       {state.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
+      <SubmitFailure details={state.details} />
       <Button type="submit" disabled={pending} className="w-full">
         {pending && <Loader2 className="h-4 w-4 animate-spin" />} Verify & continue
       </Button>

@@ -3,11 +3,14 @@
 import { useActionState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/Button";
-import { sendOtp, type AuthState } from "./actions";
+import { sendOtp } from "./actions";
+import { SubmitFailure, submitSafely, type FormState } from "./submit-safely";
 import type { LoginRole } from "./roles";
 
+const send = submitSafely(sendOtp);
+
 export function PhoneForm({ role, next }: { role: LoginRole; next: string }) {
-  const [state, action, pending] = useActionState<AuthState, FormData>(sendOtp, {});
+  const [state, action, pending] = useActionState<FormState, FormData>(send, {});
   return (
     <form action={action} className="space-y-5">
       <input type="hidden" name="role" value={role} />
@@ -30,6 +33,7 @@ export function PhoneForm({ role, next }: { role: LoginRole; next: string }) {
         </div>
       </label>
       {state.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
+      <SubmitFailure details={state.details} />
       <Button type="submit" disabled={pending} className="w-full">
         {pending && <Loader2 className="h-4 w-4 animate-spin" />} Send OTP
       </Button>
