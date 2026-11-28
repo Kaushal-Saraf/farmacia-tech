@@ -34,6 +34,6 @@ Next.js needs the pages under `src/app`, so they stay there. They are already gr
 | `src/app/app/admin` | 2 admin |
 | `src/app/app/patient` | 3 patients |
 | `src/app/app/doctor` | 4 doctors |
-| `src/app/app/vendor`, `src/app/api/device` | 5 devices |
+| `src/app/app/vendor`, `src/app/api/device`, `src/app/L` | 5 devices |
 
 Each module README lists its exact files.

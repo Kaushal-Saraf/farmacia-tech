@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Farmacia Tech device client: reference implementation of modules/5-devices/device-api.md (version 1.3).
+Farmacia Tech device client: reference implementation of modules/5-devices/device-api.md (version 1.4).
 
 Standard library only (Python 3.9+, e.g. Raspberry Pi OS). Drop this file into the device software and use
 `DeviceClient`, or run it from the command line to test the connection:
@@ -8,7 +8,8 @@ Standard library only (Python 3.9+, e.g. Raspberry Pi OS). Drop this file into t
     python3 ft_device_client.py --config config.json health      # network + server clock (no key needed)
     python3 ft_device_client.py --config config.json ping        # key check + snapshot version
     python3 ft_device_client.py --config config.json snapshot    # download and save the offline copy
-    python3 ft_device_client.py --config config.json pair        # pairing code for the operator (show it on screen)
+    python3 ft_device_client.py --config config.json pair        # Pair button: QR + code for the operator, waits until linked
+    python3 ft_device_client.py --config config.json pair --serial /dev/ttyACM0   # ...and show it on the Arduino's OLED
     python3 ft_device_client.py --config config.json selftest    # send one harmless scan (goes to the reject bin)
     python3 ft_device_client.py --config config.json status      # queue: pending / failed uploads
     python3 ft_device_client.py --config config.json run         # sync loop: ping, snapshot when changed, upload
@@ -42,7 +43,7 @@ import urllib.request
 import uuid
 from typing import Any, Optional
 
-API_VERSION = "1.2"
+API_VERSION = "1.4"
 CLIENT_VERSION = "ref-client 1.0"
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 BACKOFF_SECONDS = [10, 30, 60, 300, 900]  # then stays at 15 minutes
@@ -203,8 +204,8 @@ class DeviceClient:
         return body
 
     def request_pairing_code(self) -> dict:
-        """For the device's Pair button: returns deviceId, pairingCode, expiresAt (10 min) and linked.
-        Show deviceId and pairingCode on the screen; the operator types both on the website. Don't log the code."""
+        """For the device's Pair button: returns deviceId, pairingCode, expiresAt (10 min), linked,
+        pairingUrl and qr (rows of "1"/"0"). Show the QR and the code on the screen. Don't log the code."""
         status, body = self._request("POST", "/api/device/pairing-code")
         if status == 401:
             raise KeyRejected("Device key rejected - contact Farmacia Tech")
@@ -212,6 +213,29 @@ class DeviceClient:
             raise NetworkError(f"HTTP {status}: {body}")
         self.device_id = body.get("deviceId") or self.device_id
         return body
+
+    def seconds_left(self, pairing: dict) -> int:
+        """Seconds until the pairing code expires (using the server's clock)."""
+        expires = dt.datetime.fromisoformat(pairing["expiresAt"].replace("Z", "+00:00"))
+        return max(0, int((expires - self.server_now()).total_seconds()))
+
+    def wait_for_link(self, pairing: dict, every: float = 3.0) -> bool:
+        """After showing a pairing code: ping every few seconds until the operator links (True) or the
+        code expires (False). Ping's pairingOpen turns false as soon as the code is used."""
+        while self.seconds_left(pairing) > 0:
+            time.sleep(every)
+            try:
+                if not self.ping().get("pairingOpen", True):
+                    return self.seconds_left(pairing) > 0
+            except NetworkError:
+                pass  # keep showing the code; try again
+        return False
+
+    def pair_screen_lines(self, pairing: dict) -> list[str]:
+        """Commands for the Arduino OLED sketch (hardware/arduino/pair_screen), one per line."""
+        rows = pairing["qr"]
+        return ([f"PAIR {len(rows)}"] + [f"Q {y} {row}" for y, row in enumerate(rows)]
+                + [f"SHOW {pairing['deviceId']} {pairing['pairingCode']} {self.seconds_left(pairing)}"])
 
     def fetch_snapshot(self) -> dict:
         status, body = self._request("GET", "/api/device/snapshot")
@@ -394,6 +418,46 @@ class DeviceClient:
 # ---------------------------------------------------------------------------
 # Command line
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Pairing screen helpers
+# ---------------------------------------------------------------------------
+def qr_text(rows: list[str], quiet: int = 2) -> str:
+    """The QR drawn with block characters, two squares per text line (for a dark terminal)."""
+    n, size = len(rows), len(rows) + 2 * quiet
+
+    def light(x: int, y: int) -> bool:
+        x, y = x - quiet, y - quiet
+        return y < n + quiet and not (0 <= x < n and 0 <= y < n and rows[y][x] == "1")
+
+    lines = []
+    for y in range(0, size, 2):
+        lines.append("".join("█" if light(x, y) and light(x, y + 1) else "▀" if light(x, y) else "▄" if light(x, y + 1) else " "
+                             for x in range(size)))
+    return "\n".join(lines)
+
+
+def open_arduino(port: str, baud: int = 115200):
+    """Open the Arduino's USB serial port. Needs pyserial (pip install pyserial); only the OLED needs it."""
+    try:
+        import serial  # type: ignore
+    except ImportError:
+        sys.exit("The --serial option needs pyserial: pip install pyserial")
+    ser = serial.Serial(port, baud, timeout=2)
+    time.sleep(2)  # most Arduinos restart when the port opens
+    ser.reset_input_buffer()
+    return ser
+
+
+def send_lines(ser, lines: list[str]) -> None:
+    """Send commands to the Arduino sketch one line at a time, waiting for its "OK" after each.
+    ser: an open pyserial Serial (or anything with write() and readline())."""
+    for line in lines:
+        ser.write((line + "\n").encode("ascii"))
+        reply = ser.readline().decode("ascii", "replace").strip()
+        if reply != "OK":
+            raise RuntimeError(f"Arduino answered {reply or 'nothing'!r} to {line.split()[0]}")
+
+
 def _load_config(args) -> tuple[str, str]:
     url, key = args.url or os.environ.get("FT_URL"), args.key or os.environ.get("FT_DEVICE_KEY")
     if args.config and os.path.exists(args.config):
@@ -409,12 +473,13 @@ def _load_config(args) -> tuple[str, str]:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Farmacia Tech device client (modules/5-devices/device-api.md v1.3)")
+    ap = argparse.ArgumentParser(description="Farmacia Tech device client (modules/5-devices/device-api.md v1.4)")
     ap.add_argument("command", choices=["health", "ping", "snapshot", "pair", "selftest", "upload", "status", "run"])
     ap.add_argument("--config", default="config.json")
     ap.add_argument("--url")
     ap.add_argument("--key")
     ap.add_argument("--data", default="ft-data", help="folder for snapshot.json and queue.db")
+    ap.add_argument("--serial", help="pair: also show it on the Arduino OLED at this port, e.g. /dev/ttyACM0 (needs pyserial)")
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     url, key = _load_config(args)
@@ -432,12 +497,22 @@ def main() -> None:
             print(f"Saved {args.data}/snapshot.json · device {s['device']['deviceId']} · version {s.get('snapshotVersion')} · "
                   f"{len(s['products'])} medicines · {len(s['batches'])} confirmed batches · {len(s['recalls'])} recalls · {len(s['stock'])} stock rows")
         elif args.command == "pair":
+            arduino = open_arduino(args.serial) if args.serial else None
             p = c.request_pairing_code()
             until = dt.datetime.fromisoformat(p["expiresAt"].replace("Z", "+00:00")).astimezone().strftime("%H:%M")
             if p.get("linked"):
                 print("Note: this device is already linked. This code lets another operator take it over.")
+            print(qr_text(p["qr"]))
+            print(f"Scan with the operator's phone, or type on the website (My devices → Link a device):")
             print(f"Device ID     {p['deviceId']}\nPairing code  {p['pairingCode']}   (valid until {until}, works once)")
-            print("On the website: My devices → Link a device, then type both.")
+            if arduino:
+                send_lines(arduino, c.pair_screen_lines(p))
+                print(f"Shown on the OLED ({args.serial}).")
+            print("Waiting for the operator to link it… (Ctrl+C to stop)")
+            linked = c.wait_for_link(p)
+            print("✓ Linked." if linked else "Code expired. Run pair again.")
+            if arduino:
+                send_lines(arduino, ["DONE Linked" if linked else "DONE Expired"])
         elif args.command == "selftest":
             if not c.device_id:
                 c.ping()

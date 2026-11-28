@@ -702,7 +702,10 @@ begin
     'deviceId', m.code,
     'name', m.name,
     'snapshotVersion', public.device_snapshot_version(m.id),
-    'pollSeconds', 60);
+    'pollSeconds', 60,
+    'linked', m.owner_id is not null,
+    -- true while a pairing code is waiting to be used; turns false once the operator links (or it expires)
+    'pairingOpen', m.pairing_code_hash is not null and (m.pairing_code_expires_at is null or m.pairing_code_expires_at > now()));
 end $$;
 create or replace function public.device_snapshot(p_key text)
 returns jsonb language plpgsql security definer set search_path = '' as $$

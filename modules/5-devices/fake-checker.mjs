@@ -6,8 +6,8 @@
  *   node modules/5-devices/fake-checker.mjs --url http://localhost:3000 --key ftk_xxxxxxxx --pair
  *
  * Get the key by registering a Medicine Checker on the website (Admin → Register device). With --pair it only
- * does what the device's Pair button does: prints the Device ID and a pairing code to link it to an operator
- * account. For a useful run, add at least one medicine first (operator → Stock → Add stock).
+ * does what the device's Pair button does: prints the QR (scan it with your phone), the Device ID and the
+ * pairing code, then waits until an operator links it. For a useful run, add at least one medicine first (operator → Stock → Add stock).
  *
  * It downloads the snapshot, then sends one scan event of each kind (see modules/5-devices/device-api.md), resends one
  * (must come back "duplicate") and sends one with the wrong device ID (must be "rejected"). Then it prints
@@ -55,9 +55,37 @@ if ("pair" in args) {
     process.exit(1);
   }
   if (p.body.linked) console.log("  Note: already linked. This code lets another operator take the device over.");
+  if (p.body.qr) console.log(qrText(p.body.qr));
+  console.log(`  Scan the QR with your phone (it opens ${p.body.pairingUrl ?? "the link page"}),`);
+  console.log("  or as the operator open My devices → Link a device and type:");
   console.log(`  Device ID     ${p.body.deviceId}\n  Pairing code  ${p.body.pairingCode}   (valid until ${new Date(p.body.expiresAt).toLocaleTimeString()}, works once)`);
-  console.log("  On the website, as the operator: My devices → Link a device, then type both.");
+  console.log("  Waiting for the operator to link it… (Ctrl+C to stop)");
+  while (Date.now() < Date.parse(p.body.expiresAt)) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const ping = await call("/api/device/ping").catch(() => null);
+    if (ping?.status === 200 && ping.body.pairingOpen === false) {
+      console.log(Date.now() < Date.parse(p.body.expiresAt) ? "  ✓ Linked." : "  Code expired.");
+      process.exit(0);
+    }
+  }
+  console.log("  Code expired. Run --pair again.");
   process.exit(0);
+}
+
+/** The QR in block characters, two squares per text line (for a dark terminal), with a light border. */
+function qrText(rows, quiet = 2) {
+  const n = rows.length, size = n + 2 * quiet;
+  const light = (x, y) => {
+    const [qx, qy] = [x - quiet, y - quiet];
+    return qy < n + quiet && !(qx >= 0 && qx < n && qy >= 0 && qy < n && rows[qy][qx] === "1");
+  };
+  const out = [];
+  for (let y = 0; y < size; y += 2) {
+    let line = "  ";
+    for (let x = 0; x < size; x++) line += light(x, y) && light(x, y + 1) ? "█" : light(x, y) ? "▀" : light(x, y + 1) ? "▄" : " ";
+    out.push(line);
+  }
+  return out.join("\n");
 }
 
 // ---------- 1. Snapshot ----------

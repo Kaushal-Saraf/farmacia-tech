@@ -6,7 +6,8 @@ import { Button } from "@/components/Button";
 import { linkDevice, type DeviceFormState } from "./actions";
 import { inputClass } from "../ui";
 
-export function LinkDeviceForm() {
+/** Device ID and pairing code come pre-filled when the operator scanned the QR on the device's screen. */
+export function LinkDeviceForm({ device = "", code = "" }: { device?: string; code?: string }) {
   const [state, action, pending] = useActionState<DeviceFormState, FormData>(linkDevice, {});
   return (
     <form action={action} className="grid gap-5 sm:grid-cols-2">
@@ -15,6 +16,7 @@ export function LinkDeviceForm() {
         <input
           name="code"
           required
+          defaultValue={device}
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
@@ -27,6 +29,7 @@ export function LinkDeviceForm() {
         <input
           name="pairing_code"
           required
+          defaultValue={code}
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
@@ -36,8 +39,8 @@ export function LinkDeviceForm() {
         />
       </label>
       <p className="text-xs text-muted sm:col-span-2">
-        On the device, open <strong>Pair</strong>: its screen shows the Device ID and a pairing code (valid 10 minutes, works once).
-        For a device without a screen, Farmacia Tech gives you the code.
+        On the device, press <strong>Pair</strong>. Scan the QR on its screen with your phone, or type the Device ID and pairing
+        code shown next to it (valid 10 minutes, works once). For a device without a screen, Farmacia Tech gives you the code.
       </p>
       {state.error && <p role="alert" className="text-sm text-red-600 sm:col-span-2">{state.error}</p>}
       <div className="sm:col-span-2">

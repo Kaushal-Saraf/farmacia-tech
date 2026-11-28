@@ -2,9 +2,13 @@
 
 This is the contract between the website and the device software. Both sides follow it exactly; change it here first.
 
-**Version 1.3 (28 Nov 2026).** Implemented in `modules/5-devices/database.sql` (the `device_*` functions) and `src/app/api/device/`.
+**Version 1.4 (28 Nov 2026).** Implemented in `modules/5-devices/database.sql` (the `device_*` functions) and `src/app/api/device/`.
 Reference device client (Python, standard library only): [`hardware/ft_device_client.py`](hardware/ft_device_client.py).
 Server test without hardware: `node modules/5-devices/fake-checker.mjs --url <base URL> --key ftk_…`.
+
+Changes in 1.4:
+- The pairing-code response also has `pairingUrl` and `qr` (the QR as rows of `1`/`0`), so a small OLED can show a QR the operator scans with their phone. No QR library is needed on the device.
+- `ping` also returns `linked` and `pairingOpen` (false as soon as the operator has used the code), so the pairing screen can say "Linked".
 
 Changes in 1.3:
 - `POST /api/device/pairing-code`: the device asks for a pairing code and shows it on its own screen with its Device ID. The operator types both on the website to link the device. Valid 10 minutes, works once. Registration no longer hands out a pairing code.
@@ -118,14 +122,16 @@ Everything the device needs to work offline.
 
 ```json
 { "serverTime": "2026-11-26T10:12:31Z", "deviceId": "FT-MC-4HT8PW", "name": "City Pharmacy bench",
-  "snapshotVersion": "7afa187ad612ee8f", "pollSeconds": 60 }
+  "snapshotVersion": "7afa187ad612ee8f", "pollSeconds": 60, "linked": true, "pairingOpen": false }
 ```
+
+`linked`: the device belongs to an operator. `pairingOpen`: a pairing code is waiting to be used (see 3c).
 
 `snapshotVersion` changes when medicines, confirmed batches, recalls, this device's stock, the device name, or the date (India time) change. Compare it with the `snapshotVersion` in your saved snapshot. Ping also updates the device's "last seen" time on the website.
 
 ## 3b. `GET /api/device/health`
 
-No key. `{ "ok": true, "api": "1.3", "serverTime": "2026-11-26T10:12:31Z" }`
+No key. `{ "ok": true, "api": "1.4", "serverTime": "2026-11-26T10:12:31Z" }`
 
 ## 3c. `POST /api/device/pairing-code`
 
@@ -133,10 +139,18 @@ Key required, no body. Call it when someone presses **Pair** on the device.
 
 ```json
 { "deviceId": "FT-MC-4HT8PW", "pairingCode": "K7QM-3XHP",
-  "expiresAt": "2026-11-28T10:22:31Z", "linked": false }
+  "expiresAt": "2026-11-28T10:22:31Z", "linked": false,
+  "pairingUrl": "HTTPS://FARMACIA-TECH.VERCEL.APP/L/FT-MC-4HT8PW/K7QM3XHP",
+  "qr": ["11111110100000011000101111111", "10000010…", "… 29 rows in all"] }
 ```
 
-Show `deviceId` and `pairingCode` on the screen until `expiresAt` (10 minutes). The operator signs in on the website, opens **My devices → Link a device**, and types both. The code works once; each request replaces the previous code.
+Show the QR, `deviceId` and `pairingCode` on the screen until `expiresAt` (10 minutes). The operator either:
+- **scans the QR** with their phone camera. It opens the website's **Link a device** page with both filled in (after signing in, if needed); they press **Link device**. Or
+- signs in, opens **My devices → Link a device**, and types the Device ID and code.
+
+The code works once; each request replaces the previous code. While the code is shown, ping every 3 seconds: when `pairingOpen` turns `false` before `expiresAt`, the operator has linked it, so show "Linked".
+
+**The QR.** `qr` is the QR of `pairingUrl`, top row first, `"1"` = dark square, `"0"` = light. There is no border in the data: draw at least one light square around it. It is 29×29 squares (version 3), so on a **128×64 OLED** it fits at 2 pixels per square in the left 64×64 (58 px plus a 3 px light border). Light = lit pixel, dark = unlit, so light the whole 64×64 square first and then clear the dark squares. The link is all capitals on purpose: that keeps the QR at 29×29. The website accepts it in any case.
 
 `linked: true` means the device already belongs to an operator. A new code lets another operator take it over (for example, a device that is sold or moved), so the device should ask "Already linked. Show a code anyway?" before showing it.
 

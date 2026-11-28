@@ -33,7 +33,7 @@ export async function updateSession(request: NextRequest) {
   if (!user && pathname.startsWith("/app")) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.search = `?next=${encodeURIComponent(pathname)}`;
+    url.search = `?next=${encodeURIComponent(pathname + request.nextUrl.search)}`; // keep e.g. a scanned QR's details
     return NextResponse.redirect(url);
   }
 
