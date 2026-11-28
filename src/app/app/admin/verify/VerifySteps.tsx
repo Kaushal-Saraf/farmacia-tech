@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { Loader2, Smartphone } from "lucide-react";
 import { Button } from "@/components/Button";
 import { startEnroll, verifyCode, type EnrollState, type VerifyState } from "./actions";
@@ -10,6 +10,12 @@ const codeInput = `${inputClass} text-center font-mono text-2xl tracking-[0.4em]
 
 function CodeForm({ factorId, label }: { factorId: string; label: string }) {
   const [state, action, pending] = useActionState<VerifyState, FormData>(verifyCode, {});
+  // Full page load so the new verified session is used straight away.
+  useEffect(() => {
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full load is the point: fresh cookies
+    if (state.ok) window.location.assign("/app/admin");
+  }, [state.ok]);
+  if (state.ok) return <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><Loader2 className="h-4 w-4 animate-spin" /> Verified. Opening admin…</p>;
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="factor_id" value={factorId} />

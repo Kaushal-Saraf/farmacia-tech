@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
 import { SIDE_COOKIE } from "@/lib/side";
 
-export type VerifyState = { error?: string };
+export type VerifyState = { error?: string; ok?: boolean };
 export type EnrollState = { error?: string; factorId?: string; qr?: string; secret?: string };
 
 /** First time: add an authenticator app (shows a QR code once). */
@@ -41,7 +41,9 @@ export async function verifyCode(_prev: VerifyState, formData: FormData): Promis
     return { error: "That code is wrong or has expired. Codes change every 30 seconds." };
   }
   await supabase.rpc("admin_note_verified");
-  redirect("/app/admin");
+  // No server redirect here: the browser must load admin with the new (verified) session cookies,
+  // so the form does a full page load once it sees ok.
+  return { ok: true };
 }
 
 /** Sign out of admin (and the whole session). */
