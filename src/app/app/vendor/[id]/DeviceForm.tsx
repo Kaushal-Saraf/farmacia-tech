@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { Loader2 } from "lucide-react";
+import { useActionState, useState } from "react";
+import { ExternalLink, Loader2, LocateFixed } from "lucide-react";
 import { Button } from "@/components/Button";
 import { updateDevice, type DeviceFormState } from "../actions";
 import { inputClass } from "../../ui";
@@ -15,8 +15,43 @@ type Device = {
   low_stock_at: number;
 };
 
+type Geo = { status: "idle" | "locating" | "done" | "error"; message?: string };
+
+/** The operator sets the device's name and location. "Use my current location" fills the coordinates. */
 export function DeviceForm({ device, unit }: { device: Device; unit: string }) {
   const [state, action, pending] = useActionState<DeviceFormState, FormData>(updateDevice, {});
+  const [lat, setLat] = useState(device.latitude?.toString() ?? "");
+  const [lng, setLng] = useState(device.longitude?.toString() ?? "");
+  const [geo, setGeo] = useState<Geo>({ status: "idle" });
+
+  function locate() {
+    if (!("geolocation" in navigator)) {
+      setGeo({ status: "error", message: "This browser can't share its location. Type the coordinates instead." });
+      return;
+    }
+    setGeo({ status: "locating" });
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude.toFixed(6));
+        setLng(pos.coords.longitude.toFixed(6));
+        setGeo({ status: "done", message: `Found, accurate to about ${Math.round(pos.coords.accuracy)} m. Check it on the map, then press Save.` });
+      },
+      (err) =>
+        setGeo({
+          status: "error",
+          message:
+            err.code === err.PERMISSION_DENIED
+              ? "Location permission was refused. Allow location for this site in your browser settings and try again, or type the coordinates."
+              : err.code === err.TIMEOUT
+                ? "Finding your location took too long. Try again, ideally near a window or outdoors."
+                : "Couldn't find your location. Try again, or type the coordinates.",
+        }),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  }
+
+  const mapUrl = lat && lng ? `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}` : null;
+
   return (
     <form action={action} className="grid gap-5 sm:grid-cols-2">
       <input type="hidden" name="machine_id" value={device.id} />
@@ -28,15 +63,40 @@ export function DeviceForm({ device, unit }: { device: Device; unit: string }) {
         Address
         <input name="address" maxLength={200} defaultValue={device.address ?? ""} className={inputClass} placeholder="Shop no., street, area, city" />
       </label>
-      <label className="text-sm font-medium text-ink">
-        Latitude <span className="font-normal text-muted">(optional)</span>
-        <input name="latitude" inputMode="decimal" defaultValue={device.latitude ?? ""} className={inputClass} placeholder="28.6692" />
-      </label>
-      <label className="text-sm font-medium text-ink">
-        Longitude <span className="font-normal text-muted">(optional)</span>
-        <input name="longitude" inputMode="decimal" defaultValue={device.longitude ?? ""} className={inputClass} placeholder="77.4538" />
-      </label>
-      <p className="-mt-2 text-xs text-muted sm:col-span-2">Tip: in Google Maps, right-click the spot and click the coordinates to copy them.</p>
+
+      <div className="rounded-xl bg-surface p-4 ring-1 ring-line sm:col-span-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-ink">Map location</p>
+            <p className="text-xs text-muted">Stand next to the device and press the button on your phone. Your browser will ask for permission.</p>
+          </div>
+          <Button type="button" variant="secondary" onClick={locate} disabled={geo.status === "locating"} className="px-4 py-2.5">
+            {geo.status === "locating" ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+            {geo.status === "locating" ? "Finding location…" : "Use my current location"}
+          </Button>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="text-xs font-medium text-muted">
+            Latitude
+            <input name="latitude" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} className={inputClass} placeholder="28.669200" />
+          </label>
+          <label className="text-xs font-medium text-muted">
+            Longitude
+            <input name="longitude" inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} className={inputClass} placeholder="77.453800" />
+          </label>
+        </div>
+        {geo.message && (
+          <p role={geo.status === "error" ? "alert" : "status"} className={`mt-3 text-sm ${geo.status === "error" ? "text-red-600" : "text-emerald-700"}`}>
+            {geo.message}
+          </p>
+        )}
+        {mapUrl && (
+          <a href={mapUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline">
+            Check on Google Maps <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        )}
+      </div>
+
       <label className="text-sm font-medium text-ink">
         Low-stock alert at
         <div className="relative">

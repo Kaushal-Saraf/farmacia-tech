@@ -101,7 +101,26 @@ export default async function DevicePage({ params }: PageProps<"/app/vendor/[id]
             <h2 className="font-bold text-ink">Name & location</h2>
             {!isAdmin && <Link href={`/app/vendor/stock?device=${d.id}`} className="text-sm font-semibold text-brand-600 hover:underline">View stock →</Link>}
           </div>
-          <DeviceForm device={d} unit={d.type === "vending" ? "packs" : "strips"} />
+          {isAdmin ? (
+            // The operator sets these; admin only sees them.
+            <dl className="space-y-3 text-sm">
+              <div><dt className="text-muted">Address</dt><dd className="font-semibold text-ink">{d.address ?? "Not set yet"}</dd></div>
+              <div>
+                <dt className="text-muted">Map location</dt>
+                <dd className="font-semibold text-ink">
+                  {d.latitude !== null && d.longitude !== null ? (
+                    <a href={`https://www.google.com/maps?q=${d.latitude},${d.longitude}`} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+                      {d.latitude.toFixed(6)}, {d.longitude.toFixed(6)} (open map)
+                    </a>
+                  ) : "Not set yet"}
+                </dd>
+              </div>
+              <div><dt className="text-muted">Low-stock alert at</dt><dd className="font-semibold text-ink">{d.low_stock_at} {d.type === "vending" ? "packs" : "strips"}</dd></div>
+              <p className="pt-1 text-xs text-muted">Name, address and map location are set by the operator from their device page.</p>
+            </dl>
+          ) : (
+            <DeviceForm device={d} unit={d.type === "vending" ? "packs" : "strips"} />
+          )}
         </Card>
       </div>
 

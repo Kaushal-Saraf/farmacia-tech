@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireViewer } from "@/lib/auth";
+import { requireSide, requireViewer } from "@/lib/auth";
 import { hashDeviceKey, hashPairingCode, newDeviceCode, newDeviceKey, newPairingCode } from "@/lib/devices";
 import { deviceTypeLabel } from "@/lib/device-labels";
 import { site } from "@/lib/site";
@@ -121,7 +121,9 @@ export async function linkDevice(_prev: DeviceFormState, formData: FormData): Pr
 
 /** Name, location and low-stock limit. Code, type and owner can't be changed here. */
 export async function updateDevice(_prev: DeviceFormState, formData: FormData): Promise<DeviceFormState> {
-  const { supabase } = await requireViewer(["vendor", "admin"]);
+  // Only the operator (from the operator side) sets a device's name and location.
+  await requireSide("vendor");
+  const { supabase } = await requireViewer(["vendor"]);
   const id = String(formData.get("machine_id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim() || null;

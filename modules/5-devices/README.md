@@ -69,7 +69,7 @@
 ## Test
 
 1. As admin, go to **Register device → Medicine Checker** and copy the Device ID, pairing code and `config.json`.
-2. As an operator (a test number), go to **Link a device**, enter the Device ID and pairing code, then add one medicine via **Stock → Add stock by hand**.
+2. As an operator (a test number), go to **Link a device** and enter the Device ID and pairing code. On the device page, press **Use my current location** (on your phone, next to the device), check the map link, then **Save**. Then add one medicine via **Stock → Add stock by hand**.
 3. Run the fake device:
    ```bash
    node modules/5-devices/fake-checker.mjs --url https://farmacia-tech.vercel.app --key ftk_…
