@@ -448,14 +448,21 @@ def open_arduino(port: str, baud: int = 115200):
     return ser
 
 
-def send_lines(ser, lines: list[str]) -> None:
+def send_lines(ser, lines: list[str], on_other=None) -> None:
     """Send commands to the Arduino sketch one line at a time, waiting for its "OK" after each.
-    ser: an open pyserial Serial (or anything with write() and readline())."""
+    ser: an open pyserial Serial (or anything with write() and readline()).
+    Other lines the Arduino sends meanwhile (e.g. "BTN 2" if it also reads the buttons) are passed to
+    on_other(line) instead of being taken as the answer."""
     for line in lines:
         ser.write((line + "\n").encode("ascii"))
-        reply = ser.readline().decode("ascii", "replace").strip()
-        if reply != "OK":
-            raise RuntimeError(f"Arduino answered {reply or 'nothing'!r} to {line.split()[0]}")
+        while True:
+            reply = ser.readline().decode("ascii", "replace").strip()
+            if reply == "OK":
+                break
+            if not reply or reply.startswith("ERR"):
+                raise RuntimeError(f"Arduino answered {reply or 'nothing'!r} to {line.split()[0]}")
+            if on_other:
+                on_other(reply)
 
 
 def _load_config(args) -> tuple[str, str]:
