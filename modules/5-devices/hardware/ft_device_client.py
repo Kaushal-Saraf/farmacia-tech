@@ -416,9 +416,6 @@ class DeviceClient:
 
 
 # ---------------------------------------------------------------------------
-# Command line
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
 # Pairing screen helpers
 # ---------------------------------------------------------------------------
 def qr_text(rows: list[str], quiet: int = 2) -> str:
@@ -465,6 +462,9 @@ def send_lines(ser, lines: list[str], on_other=None) -> None:
                 on_other(reply)
 
 
+# ---------------------------------------------------------------------------
+# Command line
+# ---------------------------------------------------------------------------
 def _load_config(args) -> tuple[str, str]:
     url, key = args.url or os.environ.get("FT_URL"), args.key or os.environ.get("FT_DEVICE_KEY")
     if args.config and os.path.exists(args.config):
