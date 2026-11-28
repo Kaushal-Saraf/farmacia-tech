@@ -9,6 +9,7 @@ import { sideLabel } from "@/lib/side";
 import { signOut } from "../(auth)/login/actions";
 import { switchSide } from "./actions";
 import { PortalNav } from "./PortalNav";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export default async function PortalLayout({ children }: LayoutProps<"/app">) {
   await connection(); // always render per request — this area is private
@@ -54,21 +55,21 @@ export default async function PortalLayout({ children }: LayoutProps<"/app">) {
               <form action={switchSide} className="flex items-center gap-1">
                 <ArrowLeftRight className="hidden h-4 w-4 text-muted sm:block" aria-hidden />
                 {others.map((s) => (
-                  <button
+                  <SubmitButton
                     key={s}
                     name="side"
                     value={s}
                     className="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-200 hover:bg-brand-50"
                   >
                     {sideLabel[s]}
-                  </button>
+                  </SubmitButton>
                 ))}
               </form>
             )}
             <form action={signOut}>
-              <button className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-brand-50 hover:text-ink">
+              <SubmitButton className="rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-brand-50 hover:text-ink">
                 <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sign out</span>
-              </button>
+              </SubmitButton>
             </form>
           </div>
         </div>

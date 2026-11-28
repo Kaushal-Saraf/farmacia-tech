@@ -1,9 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
-import { SIDE_COOKIE } from "@/lib/side";
 
 export type VerifyState = { error?: string; ok?: boolean };
 export type EnrollState = { error?: string; factorId?: string; qr?: string; secret?: string };
@@ -44,12 +41,4 @@ export async function verifyCode(_prev: VerifyState, formData: FormData): Promis
   // No server redirect here: the browser must load admin with the new (verified) session cookies,
   // so the form does a full page load once it sees ok.
   return { ok: true };
-}
-
-/** Sign out of admin (and the whole session). */
-export async function lockAdmin() {
-  const { supabase } = await requireViewer();
-  await supabase.auth.signOut();
-  (await cookies()).delete(SIDE_COOKIE);
-  redirect("/login/admin");
 }

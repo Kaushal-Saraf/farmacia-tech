@@ -6,6 +6,7 @@ import type { FamilyMember } from "@/lib/types";
 import { removeMember } from "../actions";
 import { Card, PageTitle } from "../../ui";
 import { MemberForm } from "./MemberForm";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export const metadata: Metadata = { title: "My family" };
 
@@ -54,7 +55,7 @@ export default async function FamilyPage() {
                   {m.relation !== "self" && (
                     <form action={removeMember} className="mt-4 border-t border-line pt-4">
                       <input type="hidden" name="id" value={m.id} />
-                      <button className="text-sm font-semibold text-red-600 hover:underline">Remove {m.full_name.split(" ")[0]} from my family</button>
+                      <SubmitButton className="text-sm font-semibold text-red-600 hover:underline">Remove {m.full_name.split(" ")[0]} from my family</SubmitButton>
                       <p className="mt-1 text-xs text-muted">Their past prescriptions stay in your account.</p>
                     </form>
                   )}

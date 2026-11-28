@@ -7,6 +7,7 @@ import { deleteReview } from "./actions";
 import { ReviewForm } from "./ReviewForm";
 import { Decision, FieldsRead, fmtTime, type ScanFields } from "../scan-ui";
 import { Card, Empty, PageTitle } from "../../ui";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export const metadata: Metadata = { title: "Review" };
 
@@ -81,7 +82,7 @@ export default async function ReviewPage() {
                   </div>
                   <form action={deleteReview}>
                     <input type="hidden" name="event_id" value={it.id} />
-                    <button className="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 ring-1 ring-inset ring-red-200 hover:bg-red-50">Delete</button>
+                    <SubmitButton className="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 ring-1 ring-inset ring-red-200 hover:bg-red-50">Delete</SubmitButton>
                   </form>
                 </div>
                 <div className="mt-4 rounded-xl bg-surface p-4"><FieldsRead fields={it.fields} /></div>

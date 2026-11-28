@@ -5,6 +5,7 @@ import { productLabel } from "@/lib/medicine";
 import { removeRecall } from "./actions";
 import { RecallForm } from "./RecallForm";
 import { Card, Empty, PageTitle } from "../../ui";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export const metadata: Metadata = { title: "Recalls" };
 
@@ -53,7 +54,7 @@ export default async function RecallsPage() {
                         </div>
                         <form action={removeRecall}>
                           <input type="hidden" name="id" value={r.id} />
-                          <button className="rounded-lg px-3 py-1.5 text-xs font-semibold text-muted ring-1 ring-inset ring-line hover:text-red-600">Lift recall</button>
+                          <SubmitButton className="rounded-lg px-3 py-1.5 text-xs font-semibold text-muted ring-1 ring-inset ring-line hover:text-red-600">Lift recall</SubmitButton>
                         </form>
                       </div>
                       <p className={`mt-3 text-xs font-semibold ${i.units ? "text-red-700" : "text-emerald-700"}`}>

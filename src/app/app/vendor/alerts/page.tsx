@@ -6,6 +6,7 @@ import { monthLabel, productLabel } from "@/lib/medicine";
 import type { StockRow } from "@/lib/types";
 import { removeLocked } from "./actions";
 import { Card, PageTitle } from "../../ui";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export const metadata: Metadata = { title: "Alerts" };
 
@@ -92,7 +93,7 @@ export default async function AlertsPage() {
               <input type="hidden" name="stock_id" value={r.id} />
               <input type="hidden" name="quantity" value={r.quantity} />
               <input type="hidden" name="reason" value={r.lock_reason ?? "expired"} />
-              <button className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700">Removed</button>
+              <SubmitButton className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700">Removed</SubmitButton>
             </form>
           )}
         />

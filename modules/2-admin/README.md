@@ -58,7 +58,7 @@ Every admin sign-in and action is written to the **admin activity** log, shown o
 
 1. **Email only:** Supabase → **Users** → the admin user → **Send magic link**. A code should arrive.
 2. **Full sign-in:** `/login` → **Admin sign in** → email → code → authenticator (scan the QR code the first time). The **Doctors · Enquiries · Devices** tabs should appear.
-3. **Sign out of admin, then sign in again.** Both codes should be asked again.
+3. **Sign out (top bar), then sign in again.** Both codes should be asked again.
 
 **If something fails,** look in Vercel → **Logs** (search `admin sign-in`) and Supabase → **Authentication → Logs**.
 

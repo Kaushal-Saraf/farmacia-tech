@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { FileText, History, Lock, ShieldCheck, UserCheck } from "lucide-react";
-import { getAdminStatus, requireSide, requireViewer } from "@/lib/auth";
-import { lockAdmin } from "./verify/actions";
+import { FileText, History, UserCheck } from "lucide-react";
+import { requireSide, requireViewer } from "@/lib/auth";
 import { reviewApplication } from "./actions";
 import { Card, Empty, PageTitle } from "../ui";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export const metadata: Metadata = { title: "Doctor verification" };
 
@@ -24,7 +24,6 @@ const auditLabel: Record<string, string> = {
 export default async function AdminPage() {
   await requireSide("admin");
   const { supabase } = await requireViewer(["admin"]);
-  const status = await getAdminStatus();
   const [{ data: apps }, { data: reviewed }, { data: audit }] = await Promise.all([
     supabase
       .from("doctor_applications")
@@ -39,7 +38,6 @@ export default async function AdminPage() {
       .limit(20),
     supabase.from("admin_audit").select("id, action, target, created_at").order("id", { ascending: false }).limit(20),
   ]);
-  const verified = Boolean(status?.verified);
 
   // Short-lived links to each applicant's private document.
   const docLinks = new Map<string, string>();
@@ -55,19 +53,6 @@ export default async function AdminPage() {
   return (
     <>
       <PageTitle title="Doctor verification" subtitle="Check each doctor's registration before they can prescribe." />
-
-      {verified && (
-        <div className="-mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 ring-1 ring-emerald-200">
-          <span className="inline-flex items-center gap-2 font-medium">
-            <ShieldCheck className="h-4 w-4" /> Verified with email code and authenticator app
-          </span>
-          <form action={lockAdmin}>
-            <button className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold text-emerald-900 ring-1 ring-inset ring-emerald-300 hover:bg-emerald-100">
-              <Lock className="h-3.5 w-3.5" /> Sign out of admin
-            </button>
-          </form>
-        </div>
-      )}
 
       <h2 className="mb-4 text-lg font-bold text-ink">Pending doctor verifications</h2>
       {!apps?.length ? (
@@ -92,8 +77,8 @@ export default async function AdminPage() {
               <p className="mt-3 text-xs text-muted">Check the registration on the NMC Indian Medical Register before approving.</p>
               <form action={reviewApplication} className="mt-4 flex gap-2">
                 <input type="hidden" name="id" value={a.id} />
-                <button name="decision" value="approve" className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">Approve</button>
-                <button name="decision" value="reject" className="rounded-lg px-4 py-2 text-sm font-semibold text-red-600 ring-1 ring-inset ring-red-200 hover:bg-red-50">Reject</button>
+                <SubmitButton name="decision" value="approve" className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">Approve</SubmitButton>
+                <SubmitButton name="decision" value="reject" className="rounded-lg px-4 py-2 text-sm font-semibold text-red-600 ring-1 ring-inset ring-red-200 hover:bg-red-50">Reject</SubmitButton>
               </form>
             </Card>
           ))}

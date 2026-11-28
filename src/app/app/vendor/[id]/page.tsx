@@ -9,6 +9,7 @@ import { setMachineActive } from "../actions";
 import { Card, PageTitle } from "../../ui";
 import { DeviceForm } from "./DeviceForm";
 import { SecretsPanel } from "./SecretsPanel";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export const metadata: Metadata = { title: "Device" };
 
@@ -118,13 +119,13 @@ export default async function DevicePage({ params }: PageProps<"/app/vendor/[id]
             <form action={setMachineActive}>
               <input type="hidden" name="machine_id" value={d.id} />
               <input type="hidden" name="active" value={String(!d.is_active)} />
-              <button
+              <SubmitButton
                 className={`rounded-xl px-4 py-2.5 text-sm font-semibold ring-1 ring-inset ${
                   d.is_active ? "text-red-600 ring-red-200 hover:bg-red-50" : "bg-brand-500 text-white ring-brand-500 hover:bg-brand-600"
                 }`}
               >
                 {d.is_active ? "Deactivate" : "Activate"}
-              </button>
+              </SubmitButton>
             </form>
           </div>
           <div className="mt-5">
